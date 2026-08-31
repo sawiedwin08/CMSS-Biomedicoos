@@ -19,6 +19,11 @@ build/
 .vite/
 *.local
 
+# Artefactos generados por TypeScript (tsc -b)
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
 # ---------- Entorno / secretos ----------
 .env
 .env.*
@@ -41,3 +46,4 @@ media/
 
 # ---------- Scripts (locales / con datos sensibles) ----------
 scripts/
+docs/
