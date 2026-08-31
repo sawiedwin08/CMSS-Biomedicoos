@@ -1,0 +1,43 @@
+# ---------- Python / Backend ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+env/
+
+# ---------- Node / Frontend ----------
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# ---------- Entorno / secretos ----------
+.env
+.env.*
+!.env.example
+
+# ---------- Logs ----------
+*.log
+logs/
+
+# ---------- IDE / SO ----------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ---------- Uploads / archivos generados ----------
+uploads/
+media/
+*.sqlite3
+
+# ---------- Scripts (locales / con datos sensibles) ----------
+scripts/
