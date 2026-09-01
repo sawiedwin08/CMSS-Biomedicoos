@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.domain.enums.clasificacion_riesgo import ClasificacionRiesgo
 from app.domain.enums.criticidad import Criticidad
 from app.domain.enums.estado_equipo import EstadoEquipo
+from app.domain.enums.propiedad import Propiedad
 from app.infrastructure.db.base import Base
 from app.infrastructure.db.types import pg_enum
 from app.infrastructure.models.mixins import TimestampMixin
@@ -48,6 +49,7 @@ class Equipo(Base, TimestampMixin):
     servicio_id: Mapped[int | None] = mapped_column(ForeignKey("servicios.id"), index=True)
 
     # --- Datos de adquisición (RF-005) ---
+    propiedad: Mapped[Propiedad | None] = mapped_column(pg_enum(Propiedad, "propiedad"))
     proveedor_id: Mapped[int | None] = mapped_column(ForeignKey("proveedores.id"))
     fecha_adquisicion: Mapped[date | None] = mapped_column(Date)
     costo_adquisicion: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))

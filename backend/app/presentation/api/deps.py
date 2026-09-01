@@ -14,15 +14,31 @@ from app.application.interfaces.security import PasswordHasher, TokenService
 from app.core.config import settings
 from app.domain.entities.usuario import Usuario
 from app.domain.exceptions import CredencialesInvalidas
+from app.domain.repositories.equipo_repository import EquipoRepository
 from app.domain.repositories.permiso_repository import PermisoRepository
+from app.domain.repositories.proveedor_repository import ProveedorRepository
 from app.domain.repositories.rol_repository import RolRepository
+from app.domain.repositories.sede_repository import SedeRepository
+from app.domain.repositories.servicio_repository import ServicioRepository
 from app.domain.repositories.usuario_repository import UsuarioRepository
 from app.infrastructure.db.session import get_db
+from app.infrastructure.repositories.equipo_repository_sqlalchemy import (
+    EquipoRepositorySQLAlchemy,
+)
 from app.infrastructure.repositories.permiso_repository_sqlalchemy import (
     PermisoRepositorySQLAlchemy,
 )
+from app.infrastructure.repositories.proveedor_repository_sqlalchemy import (
+    ProveedorRepositorySQLAlchemy,
+)
 from app.infrastructure.repositories.rol_repository_sqlalchemy import (
     RolRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.sede_repository_sqlalchemy import (
+    SedeRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.servicio_repository_sqlalchemy import (
+    ServicioRepositorySQLAlchemy,
 )
 from app.infrastructure.repositories.usuario_repository_sqlalchemy import (
     UsuarioRepositorySQLAlchemy,
@@ -47,6 +63,22 @@ def get_permiso_repository(db: DbSession) -> PermisoRepository:
     return PermisoRepositorySQLAlchemy(db)
 
 
+def get_sede_repository(db: DbSession) -> SedeRepository:
+    return SedeRepositorySQLAlchemy(db)
+
+
+def get_servicio_repository(db: DbSession) -> ServicioRepository:
+    return ServicioRepositorySQLAlchemy(db)
+
+
+def get_proveedor_repository(db: DbSession) -> ProveedorRepository:
+    return ProveedorRepositorySQLAlchemy(db)
+
+
+def get_equipo_repository(db: DbSession) -> EquipoRepository:
+    return EquipoRepositorySQLAlchemy(db)
+
+
 # --- Servicios de seguridad ---
 def get_password_hasher() -> PasswordHasher:
     return BcryptPasswordHasher()
@@ -59,6 +91,10 @@ def get_token_service() -> TokenService:
 UsuarioRepo = Annotated[UsuarioRepository, Depends(get_usuario_repository)]
 RolRepo = Annotated[RolRepository, Depends(get_rol_repository)]
 PermisoRepo = Annotated[PermisoRepository, Depends(get_permiso_repository)]
+SedeRepo = Annotated[SedeRepository, Depends(get_sede_repository)]
+ServicioRepo = Annotated[ServicioRepository, Depends(get_servicio_repository)]
+ProveedorRepo = Annotated[ProveedorRepository, Depends(get_proveedor_repository)]
+EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
 Hasher = Annotated[PasswordHasher, Depends(get_password_hasher)]
 Tokens = Annotated[TokenService, Depends(get_token_service)]
 
