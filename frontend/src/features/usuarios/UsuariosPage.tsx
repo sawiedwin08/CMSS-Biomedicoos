@@ -4,6 +4,7 @@ import type { Rol } from '../../entities/rol'
 import type { Usuario } from '../../entities/usuario'
 import { useAuth } from '../../shared/auth/AuthContext'
 import { titulo } from '../../shared/format'
+import { type Columna, DataTable } from '../../shared/ui/DataTable'
 import { listarRoles } from '../roles/rolesApi'
 import { actualizarUsuario, crearUsuario, listarUsuarios } from './usuariosApi'
 
@@ -67,6 +68,54 @@ export function UsuariosPage() {
 
   if (cargando) return <div className="muted">Cargando usuarios…</div>
 
+  const columnas: Columna<Usuario>[] = [
+    {
+      header: 'Nombre',
+      celda: (u) => (
+        <>
+          {u.es_protegido && <span title="Usuario protegido">🔒 </span>}
+          {u.nombre}
+          {yo?.id === u.id && <span className="muted small"> (tú)</span>}
+        </>
+      ),
+    },
+    { header: 'Correo', celda: (u) => u.email },
+    {
+      header: 'Rol',
+      celda: (u) => <span className="badge">{titulo(u.rol_nombre)}</span>,
+    },
+    {
+      header: 'Estado',
+      celda: (u) => (
+        <span className={u.activo ? 'estado-ok' : 'estado-off'}>
+          {u.activo ? 'Activo' : 'Inactivo'}
+        </span>
+      ),
+    },
+    {
+      header: '',
+      ancho: 60,
+      celda: (u) =>
+        editable(u) && hayRoles ? (
+          <button
+            className="icon-btn"
+            title="Editar usuario"
+            onClick={() => {
+              setError(null)
+              setMensaje(null)
+              setEditando(u)
+            }}
+          >
+            ✏️
+          </button>
+        ) : u.es_protegido && u.id !== yo?.id ? (
+          <span className="muted" title="Protegido: no editable">
+            🔒
+          </span>
+        ) : null,
+    },
+  ]
+
   return (
     <div className="stack">
       {puedeCrear &&
@@ -91,61 +140,13 @@ export function UsuariosPage() {
         {mensaje && <div className="alert-ok">{mensaje}</div>}
         {error && <div className="alert-error">{error}</div>}
 
-        <div className="tabla-wrap">
-          <table className="tabla">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                <th style={{ width: 60 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.id}>
-                  <td>
-                    {u.es_protegido && <span title="Usuario protegido">🔒 </span>}
-                    {u.nombre}
-                    {yo?.id === u.id && <span className="muted small"> (tú)</span>}
-                  </td>
-                  <td>{u.email}</td>
-                  <td>
-                    <span className="badge">{titulo(u.rol_nombre)}</span>
-                  </td>
-                  <td>
-                    <span className={u.activo ? 'estado-ok' : 'estado-off'}>
-                      {u.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td>
-                    {editable(u) && hayRoles ? (
-                      <button
-                        className="icon-btn"
-                        title="Editar usuario"
-                        onClick={() => {
-                          setError(null)
-                          setMensaje(null)
-                          setEditando(u)
-                        }}
-                      >
-                        ✏️
-                      </button>
-                    ) : (
-                      u.es_protegido &&
-                      u.id !== yo?.id && (
-                        <span className="muted" title="Protegido: no editable">
-                          🔒
-                        </span>
-                      )
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columnas={columnas}
+          filas={usuarios}
+          keyOf={(u) => u.id}
+          porPagina={15}
+          vacio="No hay usuarios."
+        />
 
         {puedeEditar && !hayRoles && (
           <p className="muted small" style={{ marginTop: 12 }}>
