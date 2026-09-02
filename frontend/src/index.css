@@ -258,6 +258,7 @@ h1 {
 
 .content {
   flex: 1;
+  min-width: 0;
   padding: 24px 28px;
 }
 
@@ -468,6 +469,34 @@ h1 {
   font-size: 0.9rem;
 }
 
+/* Tabla compacta (Inventario): fuente y padding menores para no perder columnas */
+.tabla-compacta .tabla {
+  font-size: 0.78rem;
+}
+
+.tabla-compacta .tabla th,
+.tabla-compacta .tabla td {
+  padding: 6px 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.tabla-compacta .tabla th {
+  font-size: 0.68rem;
+}
+
+/* Ubicación apilada: sede arriba, servicio · piso abajo */
+.celda-ubic {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.celda-ubic .small {
+  font-size: 0.7rem;
+}
+
 .estado-ok {
   color: var(--ok);
   font-weight: 600;
@@ -623,4 +652,68 @@ h1 {
 .dt-pager button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* ---------- Formulario amplio (modal Inventario) ---------- */
+.modal .form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.field select,
+.field textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  background: #fff;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--azul);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+/* ---------- Selección múltiple (checkboxes) ---------- */
+.multiselect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.multiselect-op {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.multiselect-op input {
+  width: auto;
+}
+
+/* ---------- Casilla individual ---------- */
+.field-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  padding: 6px 0;
+}
+
+.field-check input {
+  width: auto;
 }

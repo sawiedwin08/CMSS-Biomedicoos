@@ -7,6 +7,26 @@ from app.domain.entities.equipo import Equipo
 from app.domain.exceptions import RecursoNoEncontrado
 from app.infrastructure.models.equipo import Equipo as EquipoModel
 
+# Campos que se copian igual entre entidad y modelo (sin transformación).
+_CAMPOS = (
+    "codigo_interno", "serial_fabricante", "nombre", "estado", "marca", "modelo",
+    "numero_activo", "sede_id", "servicio_id", "piso", "clase_biomedica", "clase_uso",
+    "clasificacion_riesgo", "tecnologia_predominante", "fabricante", "anio_fabricacion",
+    "pais_fabricante", "ciudad_fabricante", "direccion_fabricante", "telefono_fabricante",
+    "correo_fabricante", "representante", "pais_representante", "ciudad_representante",
+    "direccion_representante", "telefono_representante", "correo_representante",
+    "voltaje_operacion", "voltaje_maximo", "corriente_maxima", "corriente_minima",
+    "potencia_consumida", "frecuencia", "presion", "velocidad", "temperatura", "peso",
+    "capacidad", "fuentes_alimentacion", "manuales", "planos", "recomendaciones_fabricante",
+    "modo_adquisicion", "propiedad", "proveedor_id", "fecha_adquisicion", "costo_adquisicion",
+    "orden_compra", "fecha_inicial_garantia", "fecha_final_garantia", "fecha_instalacion",
+    "fecha_funcionamiento", "registro_invima", "fecha_vencimiento_invima",
+    "periodicidad_mantenimiento", "calibracion_si", "calibracion_no", "equipo_movil",
+    "equipo_fijo", "accesorios", "descripcion_funcional",
+)
+# Campos de tipo lista que deben normalizarse a [] cuando la BD devuelve NULL.
+_LISTAS = ("fuentes_alimentacion", "manuales", "planos", "recomendaciones_fabricante")
+
 
 class EquipoRepositorySQLAlchemy:
     def __init__(self, session: Session) -> None:
@@ -14,29 +34,20 @@ class EquipoRepositorySQLAlchemy:
 
     @staticmethod
     def _a_entidad(m: EquipoModel) -> Equipo:
+        valores = {campo: getattr(m, campo) for campo in _CAMPOS}
+        for campo in _LISTAS:
+            valores[campo] = valores[campo] or []
         return Equipo(
             id=m.id,
-            codigo_interno=m.codigo_interno,
-            serial_fabricante=m.serial_fabricante,
-            nombre=m.nombre,
-            estado=m.estado,
-            marca=m.marca,
-            modelo=m.modelo,
-            criticidad=m.criticidad,
-            registro_invima=m.registro_invima,
-            clasificacion_riesgo=m.clasificacion_riesgo,
-            propiedad=m.propiedad,
-            sede_id=m.sede_id,
-            servicio_id=m.servicio_id,
-            proveedor_id=m.proveedor_id,
-            fecha_adquisicion=m.fecha_adquisicion,
-            costo_adquisicion=m.costo_adquisicion,
-            fin_garantia=m.fin_garantia,
-            orden_compra=m.orden_compra,
+            **valores,
             sede_nombre=m.sede.nombre if m.sede else None,
             servicio_nombre=m.servicio.nombre if m.servicio else None,
             proveedor_nombre=m.proveedor.nombre if m.proveedor else None,
         )
+
+    @staticmethod
+    def _campos(e: Equipo) -> dict:
+        return {campo: getattr(e, campo) for campo in _CAMPOS}
 
     def listar(self, filtro: FiltroEquipos) -> list[Equipo]:
         stmt = select(EquipoModel)
@@ -48,6 +59,7 @@ class EquipoRepositorySQLAlchemy:
                     EquipoModel.codigo_interno.ilike(patron),
                     EquipoModel.serial_fabricante.ilike(patron),
                     EquipoModel.marca.ilike(patron),
+                    EquipoModel.numero_activo.ilike(patron),
                 )
             )
         if filtro.sede_id is not None:
@@ -56,10 +68,10 @@ class EquipoRepositorySQLAlchemy:
             stmt = stmt.where(EquipoModel.servicio_id == filtro.servicio_id)
         if filtro.estado is not None:
             stmt = stmt.where(EquipoModel.estado == filtro.estado)
-        if filtro.criticidad is not None:
-            stmt = stmt.where(EquipoModel.criticidad == filtro.criticidad)
         if filtro.propiedad is not None:
             stmt = stmt.where(EquipoModel.propiedad == filtro.propiedad)
+        if filtro.clasificacion_riesgo is not None:
+            stmt = stmt.where(EquipoModel.clasificacion_riesgo == filtro.clasificacion_riesgo)
         stmt = stmt.order_by(EquipoModel.codigo_interno)
         return [self._a_entidad(m) for m in self._session.scalars(stmt)]
 
@@ -111,25 +123,3 @@ class EquipoRepositorySQLAlchemy:
             raise RecursoNoEncontrado(f"El equipo {equipo_id} no existe.")
         self._session.delete(model)
         self._session.commit()
-
-    @staticmethod
-    def _campos(e: Equipo) -> dict:
-        return {
-            "codigo_interno": e.codigo_interno,
-            "serial_fabricante": e.serial_fabricante,
-            "nombre": e.nombre,
-            "estado": e.estado,
-            "marca": e.marca,
-            "modelo": e.modelo,
-            "criticidad": e.criticidad,
-            "registro_invima": e.registro_invima,
-            "clasificacion_riesgo": e.clasificacion_riesgo,
-            "propiedad": e.propiedad,
-            "sede_id": e.sede_id,
-            "servicio_id": e.servicio_id,
-            "proveedor_id": e.proveedor_id,
-            "fecha_adquisicion": e.fecha_adquisicion,
-            "costo_adquisicion": e.costo_adquisicion,
-            "fin_garantia": e.fin_garantia,
-            "orden_compra": e.orden_compra,
-        }

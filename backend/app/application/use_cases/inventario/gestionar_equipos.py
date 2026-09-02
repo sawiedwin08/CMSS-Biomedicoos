@@ -1,4 +1,6 @@
 """Casos de uso de gestión de equipos — núcleo del Inventario (RF-001..007)."""
+from dataclasses import asdict
+
 from app.application.dto.equipos import DatosEquipo, FiltroEquipos
 from app.domain.entities.equipo import Equipo
 from app.domain.exceptions import (
@@ -13,25 +15,12 @@ from app.domain.repositories.servicio_repository import ServicioRepository
 
 
 def _a_entidad(datos: DatosEquipo) -> Equipo:
-    return Equipo(
-        codigo_interno=(datos.codigo_interno or "").strip(),
-        serial_fabricante=datos.serial_fabricante.strip(),
-        nombre=datos.nombre.strip(),
-        estado=datos.estado,
-        marca=datos.marca,
-        modelo=datos.modelo,
-        criticidad=datos.criticidad,
-        registro_invima=datos.registro_invima,
-        clasificacion_riesgo=datos.clasificacion_riesgo,
-        propiedad=datos.propiedad,
-        sede_id=datos.sede_id,
-        servicio_id=datos.servicio_id,
-        proveedor_id=datos.proveedor_id,
-        fecha_adquisicion=datos.fecha_adquisicion,
-        costo_adquisicion=datos.costo_adquisicion,
-        fin_garantia=datos.fin_garantia,
-        orden_compra=datos.orden_compra,
-    )
+    # DatosEquipo y Equipo comparten los mismos campos de datos; se copian todos.
+    campos = asdict(datos)
+    campos["codigo_interno"] = (datos.codigo_interno or "").strip()
+    campos["serial_fabricante"] = datos.serial_fabricante.strip()
+    campos["nombre"] = datos.nombre.strip()
+    return Equipo(**campos)
 
 
 class _ValidadorReferencias:
