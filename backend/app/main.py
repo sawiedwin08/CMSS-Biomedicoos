@@ -5,7 +5,16 @@ from fastapi.responses import RedirectResponse
 
 from app.core.config import settings
 from app.presentation.api.errors import registrar_manejadores_errores
-from app.presentation.api.v1.routers import auth, permisos, roles, usuarios
+from app.presentation.api.v1.routers import (
+    auth,
+    equipos,
+    permisos,
+    proveedores,
+    roles,
+    sedes,
+    servicios,
+    usuarios,
+)
 
 
 def crear_app() -> FastAPI:
@@ -35,6 +44,10 @@ def crear_app() -> FastAPI:
     app.include_router(usuarios.router, prefix=settings.API_V1_PREFIX)
     app.include_router(roles.router, prefix=settings.API_V1_PREFIX)
     app.include_router(permisos.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(sedes.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(servicios.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(proveedores.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(equipos.router, prefix=settings.API_V1_PREFIX)
 
     @app.get("/", include_in_schema=False)
     def raiz() -> RedirectResponse:

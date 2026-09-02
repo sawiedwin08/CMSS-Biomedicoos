@@ -121,9 +121,72 @@ h1 {
   font-size: 0.875rem;
 }
 
-/* ---------- Dashboard ---------- */
-.app-shell {
+/* ---------- Layout con barra lateral ---------- */
+.layout {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+}
+
+.sidebar {
+  background: #fff;
+  color: var(--texto);
+  border-right: 1px solid var(--borde);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 12px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 16px;
+  font-weight: 700;
+  color: var(--texto);
+  font-size: 1.02rem;
+  border-bottom: 1px solid var(--borde);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.nav-item:hover {
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+.nav-item.activo {
+  background: #e8f1fb;
+  color: var(--azul-oscuro);
+}
+
+.nav-ico {
+  font-size: 1.05rem;
+  width: 20px;
+  text-align: center;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .topbar {
@@ -133,6 +196,36 @@ h1 {
   padding: 12px 24px;
   background: #fff;
   border-bottom: 1px solid var(--borde);
+}
+
+.topbar-title {
+  font-size: 0.95rem;
+  color: var(--texto);
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 10px;
+  }
+  .sidebar-brand {
+    border: none;
+    padding: 8px;
+    white-space: nowrap;
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    margin-top: 0;
+  }
+  .nav-item {
+    white-space: nowrap;
+  }
 }
 
 .topbar-right {
@@ -164,9 +257,8 @@ h1 {
 }
 
 .content {
-  max-width: 1080px;
-  margin: 28px auto;
-  padding: 0 20px;
+  flex: 1;
+  padding: 24px 28px;
 }
 
 .datos {
@@ -189,32 +281,6 @@ h1 {
 .next-hint {
   text-align: center;
   font-size: 0.875rem;
-}
-
-/* ---------- Navegación ---------- */
-.nav {
-  display: flex;
-  gap: 4px;
-  flex: 1;
-  margin-left: 24px;
-}
-
-.nav a {
-  padding: 7px 14px;
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.nav a:hover {
-  background: var(--fondo);
-}
-
-.nav a.activo {
-  background: #e8f1fb;
-  color: var(--azul-oscuro);
 }
 
 .alert-ok {
@@ -496,4 +562,65 @@ h1 {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 4px;
+}
+
+.modal-ancho {
+  max-width: 720px;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.grupo-tit {
+  margin: 16px 0 4px;
+  font-size: 0.85rem;
+  color: var(--azul-oscuro);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ---------- Filtros ---------- */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.filtros input,
+.filtros select {
+  padding: 8px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.filtro-texto {
+  flex: 1;
+  min-width: 220px;
+}
+
+.acciones-head {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- Paginación de tablas ---------- */
+.dt-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dt-pager {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dt-pager button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
