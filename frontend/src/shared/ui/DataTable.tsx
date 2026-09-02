@@ -13,6 +13,7 @@ interface Props<T> {
   keyOf: (fila: T) => string | number
   porPagina?: number
   vacio?: ReactNode
+  className?: string
 }
 
 /** Tabla estándar del sistema: encabezados, filas, paginación y estado vacío. */
@@ -22,6 +23,7 @@ export function DataTable<T>({
   keyOf,
   porPagina = 15,
   vacio = 'Sin registros.',
+  className,
 }: Props<T>) {
   const [pagina, setPagina] = useState(1)
   const total = filas.length
@@ -36,7 +38,7 @@ export function DataTable<T>({
   const visibles = filas.slice(inicio, inicio + porPagina)
 
   return (
-    <div>
+    <div className={className}>
       <div className="tabla-wrap">
         <table className="tabla">
           <thead>

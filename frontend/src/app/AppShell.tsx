@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from 'react-router-dom'
 
 import { DashboardPage } from '../features/dashboard/DashboardPage'
 import { EquiposPage } from '../features/inventario/EquiposPage'
+import { InventarioPage } from '../features/inventario/InventarioPage'
 import { ProveedoresPage } from '../features/inventario/ProveedoresPage'
 import { SedesPage } from '../features/inventario/SedesPage'
 import { ServiciosPage } from '../features/inventario/ServiciosPage'
@@ -23,6 +24,7 @@ export function AppShell() {
 
   const items: ItemMenu[] = [
     { to: '/', icono: '🏠', texto: 'Inicio', visible: true },
+    { to: '/inventario', icono: '🗂️', texto: 'Inventario', visible: puede('inventario:ver') },
     { to: '/equipos', icono: '🩻', texto: 'Equipos', visible: puede('inventario:ver') },
     { to: '/sedes', icono: '🏢', texto: 'Sedes', visible: puede('inventario:ver') },
     { to: '/servicios', icono: '🏬', texto: 'Servicios', visible: puede('inventario:ver') },
@@ -74,6 +76,9 @@ export function AppShell() {
         <main className="content">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
+            {puede('inventario:ver') && (
+              <Route path="/inventario" element={<InventarioPage />} />
+            )}
             {puede('inventario:ver') && (
               <Route path="/equipos" element={<EquiposPage />} />
             )}

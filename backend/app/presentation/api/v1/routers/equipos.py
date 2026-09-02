@@ -13,7 +13,7 @@ from app.application.use_cases.inventario.gestionar_equipos import (
     ObtenerEquipo,
 )
 from app.application.use_cases.inventario.importar_equipos import ImportarEquipos
-from app.domain.enums.criticidad import Criticidad
+from app.domain.enums.clasificacion_riesgo import ClasificacionRiesgo
 from app.domain.enums.estado_equipo import EstadoEquipo
 from app.domain.enums.propiedad import Propiedad
 from app.infrastructure.services.excel_equipos import generar_plantilla, parse_equipos
@@ -52,16 +52,16 @@ def listar_equipos(
     sede_id: int | None = None,
     servicio_id: int | None = None,
     estado: EstadoEquipo | None = None,
-    criticidad: Criticidad | None = None,
     propiedad: Propiedad | None = None,
+    clasificacion_riesgo: ClasificacionRiesgo | None = None,
 ) -> list[EquipoRead]:
     filtro = FiltroEquipos(
         texto=texto,
         sede_id=sede_id,
         servicio_id=servicio_id,
         estado=estado,
-        criticidad=criticidad,
         propiedad=propiedad,
+        clasificacion_riesgo=clasificacion_riesgo,
     )
     return [EquipoRead.model_validate(e) for e in ListarEquipos(equipos).ejecutar(filtro)]
 
