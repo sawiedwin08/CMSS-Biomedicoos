@@ -18,3 +18,19 @@ rol_permiso = Table(
         primary_key=True,
     ),
 )
+
+# Rol <-> Módulo (acceso a módulos de la plataforma por rol)
+rol_modulo = Table(
+    "rol_modulo",
+    Base.metadata,
+    Column(
+        "rol_id",
+        ForeignKey("roles.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "modulo_id",
+        ForeignKey("modulos.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)

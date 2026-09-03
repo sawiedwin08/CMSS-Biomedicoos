@@ -14,6 +14,8 @@ class Usuario:
     # Datos del rol resueltos para autorización (se llenan al leer de la BD).
     rol_nombre: str | None = None
     permisos: frozenset[str] = field(default_factory=frozenset)
+    # Slugs de los módulos activos a los que el rol da acceso.
+    modulos: frozenset[str] = field(default_factory=frozenset)
 
     def tiene_permiso(self, codigo: str) -> bool:
         return codigo in self.permisos

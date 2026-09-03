@@ -15,6 +15,7 @@ from app.core.config import settings
 from app.domain.entities.usuario import Usuario
 from app.domain.exceptions import CredencialesInvalidas
 from app.domain.repositories.equipo_repository import EquipoRepository
+from app.domain.repositories.modulo_repository import ModuloRepository
 from app.domain.repositories.permiso_repository import PermisoRepository
 from app.domain.repositories.proveedor_repository import ProveedorRepository
 from app.domain.repositories.rol_repository import RolRepository
@@ -24,6 +25,9 @@ from app.domain.repositories.usuario_repository import UsuarioRepository
 from app.infrastructure.db.session import get_db
 from app.infrastructure.repositories.equipo_repository_sqlalchemy import (
     EquipoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.modulo_repository_sqlalchemy import (
+    ModuloRepositorySQLAlchemy,
 )
 from app.infrastructure.repositories.permiso_repository_sqlalchemy import (
     PermisoRepositorySQLAlchemy,
@@ -79,6 +83,10 @@ def get_equipo_repository(db: DbSession) -> EquipoRepository:
     return EquipoRepositorySQLAlchemy(db)
 
 
+def get_modulo_repository(db: DbSession) -> ModuloRepository:
+    return ModuloRepositorySQLAlchemy(db)
+
+
 # --- Servicios de seguridad ---
 def get_password_hasher() -> PasswordHasher:
     return BcryptPasswordHasher()
@@ -95,6 +103,7 @@ SedeRepo = Annotated[SedeRepository, Depends(get_sede_repository)]
 ServicioRepo = Annotated[ServicioRepository, Depends(get_servicio_repository)]
 ProveedorRepo = Annotated[ProveedorRepository, Depends(get_proveedor_repository)]
 EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
+ModuloRepo = Annotated[ModuloRepository, Depends(get_modulo_repository)]
 Hasher = Annotated[PasswordHasher, Depends(get_password_hasher)]
 Tokens = Annotated[TokenService, Depends(get_token_service)]
 
