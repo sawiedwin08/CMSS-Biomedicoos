@@ -94,6 +94,8 @@ class Equipo:
     descripcion_funcional: str | None = None
 
     id: int | None = None
+    # Metadato de foto (solo lectura; los bytes se sirven aparte)
+    foto_mime: str | None = None
     # Nombres resueltos para lectura
     sede_nombre: str | None = None
     servicio_nombre: str | None = None

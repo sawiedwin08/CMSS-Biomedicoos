@@ -119,6 +119,27 @@ export async function eliminarEquipo(id: number): Promise<void> {
   await api.delete(`/equipos/${id}`)
 }
 
+// --- Foto del equipo ---
+export async function subirFotoEquipo(id: number, archivo: File): Promise<void> {
+  const fd = new FormData()
+  fd.append('archivo', archivo)
+  await api.post(`/equipos/${id}/foto`, fd)
+}
+
+export async function eliminarFotoEquipo(id: number): Promise<void> {
+  await api.delete(`/equipos/${id}/foto`)
+}
+
+/** Descarga la foto (autenticada) y devuelve un object URL para <img>, o null si no hay. */
+export async function obtenerFotoUrl(id: number): Promise<string | null> {
+  try {
+    const res = await api.get(`/equipos/${id}/foto`, { responseType: 'blob' })
+    return URL.createObjectURL(res.data as Blob)
+  } catch {
+    return null
+  }
+}
+
 export interface ResultadoImportacion {
   total: number
   creados: number

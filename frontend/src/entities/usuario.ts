@@ -7,4 +7,5 @@ export interface Usuario {
   rol_id: number
   rol_nombre: string | null
   permisos: string[]
+  modulos: string[]
 }

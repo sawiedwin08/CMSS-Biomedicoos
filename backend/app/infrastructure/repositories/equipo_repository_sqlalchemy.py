@@ -40,6 +40,7 @@ class EquipoRepositorySQLAlchemy:
         return Equipo(
             id=m.id,
             **valores,
+            foto_mime=m.foto_mime,
             sede_nombre=m.sede.nombre if m.sede else None,
             servicio_nombre=m.servicio.nombre if m.servicio else None,
             proveedor_nombre=m.proveedor.nombre if m.proveedor else None,
@@ -122,4 +123,27 @@ class EquipoRepositorySQLAlchemy:
         if model is None:
             raise RecursoNoEncontrado(f"El equipo {equipo_id} no existe.")
         self._session.delete(model)
+        self._session.commit()
+
+    # --- Foto del equipo ---
+    def guardar_foto(self, equipo_id: int, contenido: bytes, mime: str) -> None:
+        model = self._session.get(EquipoModel, equipo_id)
+        if model is None:
+            raise RecursoNoEncontrado(f"El equipo {equipo_id} no existe.")
+        model.foto = contenido
+        model.foto_mime = mime
+        self._session.commit()
+
+    def obtener_foto(self, equipo_id: int) -> tuple[bytes, str] | None:
+        model = self._session.get(EquipoModel, equipo_id)
+        if model is None or model.foto is None:
+            return None
+        return model.foto, (model.foto_mime or "application/octet-stream")
+
+    def eliminar_foto(self, equipo_id: int) -> None:
+        model = self._session.get(EquipoModel, equipo_id)
+        if model is None:
+            raise RecursoNoEncontrado(f"El equipo {equipo_id} no existe.")
+        model.foto = None
+        model.foto_mime = None
         self._session.commit()

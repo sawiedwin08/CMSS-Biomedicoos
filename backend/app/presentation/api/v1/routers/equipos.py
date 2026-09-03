@@ -1,7 +1,7 @@
 """Router de gestión de equipos — núcleo del Inventario (RF-001..007)."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
 
 from app.application.dto.equipos import DatosEquipo, FiltroEquipos
@@ -156,3 +156,57 @@ def actualizar_equipo(
 )
 def eliminar_equipo(equipo_id: int, equipos: EquipoRepo) -> None:
     EliminarEquipo(equipos).ejecutar(equipo_id)
+
+
+_IMAGENES_OK = {"image/jpeg", "image/png", "image/webp"}
+_FOTO_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post(
+    "/{equipo_id}/foto",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Subir/actualizar la foto del equipo",
+    dependencies=[Depends(require_permiso("inventario:editar"))],
+)
+def subir_foto(
+    equipo_id: int,
+    equipos: EquipoRepo,
+    archivo: Annotated[UploadFile, File(description="Imagen JPG, PNG o WEBP")],
+) -> None:
+    if archivo.content_type not in _IMAGENES_OK:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato no válido. Usa JPG, PNG o WEBP.",
+        )
+    contenido = archivo.file.read()
+    if len(contenido) > _FOTO_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La imagen supera el máximo de 5 MB.",
+        )
+    equipos.guardar_foto(equipo_id, contenido, archivo.content_type)
+
+
+@router.get(
+    "/{equipo_id}/foto",
+    summary="Obtener la foto del equipo",
+    dependencies=[Depends(require_permiso("inventario:ver"))],
+)
+def obtener_foto(equipo_id: int, equipos: EquipoRepo) -> Response:
+    resultado = equipos.obtener_foto(equipo_id)
+    if resultado is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="El equipo no tiene foto."
+        )
+    contenido, mime = resultado
+    return Response(content=contenido, media_type=mime)
+
+
+@router.delete(
+    "/{equipo_id}/foto",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar la foto del equipo",
+    dependencies=[Depends(require_permiso("inventario:editar"))],
+)
+def eliminar_foto(equipo_id: int, equipos: EquipoRepo) -> None:
+    equipos.eliminar_foto(equipo_id)

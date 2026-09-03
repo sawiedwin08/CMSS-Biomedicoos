@@ -3,8 +3,9 @@ from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.db.base import Base
-from app.infrastructure.models.associations import rol_permiso
+from app.infrastructure.models.associations import rol_modulo, rol_permiso
 from app.infrastructure.models.mixins import TimestampMixin
+from app.infrastructure.models.modulo import ModuloModel
 from app.infrastructure.models.permiso import PermisoModel
 
 
@@ -21,4 +22,9 @@ class RolModel(Base, TimestampMixin):
         secondary=rol_permiso,
         lazy="selectin",
         order_by="PermisoModel.codigo",
+    )
+    modulos: Mapped[list[ModuloModel]] = relationship(
+        secondary=rol_modulo,
+        lazy="selectin",
+        order_by="ModuloModel.orden",
     )

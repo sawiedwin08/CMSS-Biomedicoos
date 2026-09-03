@@ -2,7 +2,16 @@
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -109,6 +118,11 @@ class Equipo(Base, TimestampMixin):
     equipo_fijo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     accesorios: Mapped[str | None] = mapped_column(Text)
     descripcion_funcional: Mapped[str | None] = mapped_column(Text)
+
+    # --- Foto del equipo (para la hoja de vida) ---
+    # 'foto' es diferida: no se carga en los listados, solo al pedirla.
+    foto_mime: Mapped[str | None] = mapped_column(String(50))
+    foto: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
 
     # --- Relaciones ---
     sede: Mapped["Sede | None"] = relationship()  # noqa: F821
