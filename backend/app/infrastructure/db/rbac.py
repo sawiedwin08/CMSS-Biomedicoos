@@ -40,6 +40,8 @@ CATALOGO: list[tuple[str, str, str]] = [
     ("roles", "crear", "Crear roles"),
     ("roles", "editar", "Editar roles y sus permisos"),
     ("roles", "eliminar", "Eliminar roles"),
+    ("modulos", "ver", "Ver módulos de la plataforma"),
+    ("modulos", "asignar", "Asignar módulos de acceso a los roles"),
 ]
 
 # --- Roles de sistema: (nombre, descripción) ---
@@ -50,6 +52,33 @@ ROLES_SISTEMA: list[tuple[str, str]] = [
     ("tecnico", "Ejecución de mantenimientos y registro en campo"),
     ("consulta", "Solo lectura"),
 ]
+
+# --- Módulos de la plataforma: (slug, nombre, descripción, icono, orden) ---
+MODULOS_SISTEMA: list[tuple[str, str, str, str, int]] = [
+    (
+        "biomedicos",
+        "Equipos Biomédicos",
+        "Gestión de activos biomédicos: inventario, hojas de vida, mantenimiento y más.",
+        "🩺",
+        1,
+    ),
+    (
+        "admin",
+        "Administración",
+        "Usuarios, roles y módulos de la plataforma.",
+        "⚙️",
+        99,
+    ),
+]
+
+# --- Acceso por defecto a módulos según el rol ---
+MODULOS_POR_ROL: dict[str, set[str]] = {
+    "admin": {"biomedicos", "admin"},
+    "coordinador": {"biomedicos", "admin"},
+    "ingeniero_biomedico": {"biomedicos"},
+    "tecnico": {"biomedicos"},
+    "consulta": {"biomedicos"},
+}
 
 
 def _codigo(modulo: str, accion: str) -> str:
@@ -126,6 +155,40 @@ def seed_rbac(session: Session) -> None:
         elif not rol.permisos:
             codigos = _permisos_por_defecto(nombre, todos_codigos)
             rol.permisos = [existentes[c] for c in codigos if c in existentes]
+
+    # 3) Módulos de la plataforma (crear los que falten)
+    from sqlalchemy import select
+
+    from app.infrastructure.models.modulo import ModuloModel
+
+    modulos_existentes = {
+        m.slug: m for m in session.scalars(select(ModuloModel)).all()
+    }
+    for slug, nombre_mod, descripcion_mod, icono, orden in MODULOS_SISTEMA:
+        if slug not in modulos_existentes:
+            modulo = ModuloModel(
+                slug=slug,
+                nombre=nombre_mod,
+                descripcion=descripcion_mod,
+                icono=icono,
+                orden=orden,
+            )
+            session.add(modulo)
+            modulos_existentes[slug] = modulo
+    session.flush()
+
+    # 4) Acceso a módulos por rol (admin siempre todos; otros solo si están vacíos)
+    for nombre, _descripcion in ROLES_SISTEMA:
+        rol = session.scalar(select_rol_por_nombre(nombre))
+        if rol is None:
+            continue
+        if nombre == "admin":
+            rol.modulos = list(modulos_existentes.values())
+        elif not rol.modulos:
+            slugs = MODULOS_POR_ROL.get(nombre, set())
+            rol.modulos = [
+                modulos_existentes[s] for s in slugs if s in modulos_existentes
+            ]
 
     session.commit()
 

@@ -25,6 +25,9 @@ class UsuarioRepositorySQLAlchemy:
             permisos=frozenset(p.codigo for p in model.rol.permisos)
             if model.rol
             else frozenset(),
+            modulos=frozenset(m.slug for m in model.rol.modulos if m.activo)
+            if model.rol
+            else frozenset(),
         )
 
     def obtener_por_id(self, usuario_id: int) -> Usuario | None:

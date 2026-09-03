@@ -33,8 +33,8 @@ export function LoginPage() {
         <div className="brand">
           <span className="brand-icon">🩺</span>
           <div>
-            <h1>CMVA-Biomédicos</h1>
-            <p className="muted">Gestión de Activos Biomédicos</p>
+            <h1>Sistema de Gestión CMVA</h1>
+            <p className="muted">Gestión de CMVA</p>
           </div>
         </div>
 

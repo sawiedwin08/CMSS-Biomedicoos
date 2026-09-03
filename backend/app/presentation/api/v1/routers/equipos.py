@@ -1,7 +1,7 @@
 """Router de gestión de equipos — núcleo del Inventario (RF-001..007)."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
 
 from app.application.dto.equipos import DatosEquipo, FiltroEquipos
@@ -13,7 +13,7 @@ from app.application.use_cases.inventario.gestionar_equipos import (
     ObtenerEquipo,
 )
 from app.application.use_cases.inventario.importar_equipos import ImportarEquipos
-from app.domain.enums.criticidad import Criticidad
+from app.domain.enums.clasificacion_riesgo import ClasificacionRiesgo
 from app.domain.enums.estado_equipo import EstadoEquipo
 from app.domain.enums.propiedad import Propiedad
 from app.infrastructure.services.excel_equipos import generar_plantilla, parse_equipos
@@ -52,16 +52,16 @@ def listar_equipos(
     sede_id: int | None = None,
     servicio_id: int | None = None,
     estado: EstadoEquipo | None = None,
-    criticidad: Criticidad | None = None,
     propiedad: Propiedad | None = None,
+    clasificacion_riesgo: ClasificacionRiesgo | None = None,
 ) -> list[EquipoRead]:
     filtro = FiltroEquipos(
         texto=texto,
         sede_id=sede_id,
         servicio_id=servicio_id,
         estado=estado,
-        criticidad=criticidad,
         propiedad=propiedad,
+        clasificacion_riesgo=clasificacion_riesgo,
     )
     return [EquipoRead.model_validate(e) for e in ListarEquipos(equipos).ejecutar(filtro)]
 
@@ -156,3 +156,57 @@ def actualizar_equipo(
 )
 def eliminar_equipo(equipo_id: int, equipos: EquipoRepo) -> None:
     EliminarEquipo(equipos).ejecutar(equipo_id)
+
+
+_IMAGENES_OK = {"image/jpeg", "image/png", "image/webp"}
+_FOTO_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post(
+    "/{equipo_id}/foto",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Subir/actualizar la foto del equipo",
+    dependencies=[Depends(require_permiso("inventario:editar"))],
+)
+def subir_foto(
+    equipo_id: int,
+    equipos: EquipoRepo,
+    archivo: Annotated[UploadFile, File(description="Imagen JPG, PNG o WEBP")],
+) -> None:
+    if archivo.content_type not in _IMAGENES_OK:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato no válido. Usa JPG, PNG o WEBP.",
+        )
+    contenido = archivo.file.read()
+    if len(contenido) > _FOTO_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La imagen supera el máximo de 5 MB.",
+        )
+    equipos.guardar_foto(equipo_id, contenido, archivo.content_type)
+
+
+@router.get(
+    "/{equipo_id}/foto",
+    summary="Obtener la foto del equipo",
+    dependencies=[Depends(require_permiso("inventario:ver"))],
+)
+def obtener_foto(equipo_id: int, equipos: EquipoRepo) -> Response:
+    resultado = equipos.obtener_foto(equipo_id)
+    if resultado is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="El equipo no tiene foto."
+        )
+    contenido, mime = resultado
+    return Response(content=contenido, media_type=mime)
+
+
+@router.delete(
+    "/{equipo_id}/foto",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Eliminar la foto del equipo",
+    dependencies=[Depends(require_permiso("inventario:editar"))],
+)
+def eliminar_foto(equipo_id: int, equipos: EquipoRepo) -> None:
+    equipos.eliminar_foto(equipo_id)

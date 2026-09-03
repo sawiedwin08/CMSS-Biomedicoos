@@ -33,3 +33,4 @@ class UsuarioRead(BaseModel):
     rol_id: int
     rol_nombre: str | None = None
     permisos: list[str] = []
+    modulos: list[str] = []
