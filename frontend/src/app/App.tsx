@@ -1,6 +1,6 @@
 import { LoginPage } from '../features/auth/LoginPage'
 import { useAuth } from '../shared/auth/AuthContext'
-import { AppShell } from './AppShell'
+import { PlatformRoutes } from './PlatformRoutes'
 
 export function App() {
   const { usuario, cargando } = useAuth()
@@ -9,5 +9,5 @@ export function App() {
     return <div className="centro muted">Cargando…</div>
   }
 
-  return usuario ? <AppShell /> : <LoginPage />
+  return usuario ? <PlatformRoutes /> : <LoginPage />
 }

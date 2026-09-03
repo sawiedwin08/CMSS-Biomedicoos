@@ -26,10 +26,13 @@ import {
   type DatosEquipo,
   descargarPlantilla,
   eliminarEquipo,
+  eliminarFotoEquipo,
   type FiltroEquipos,
   importarEquipos,
   listarEquipos,
+  obtenerFotoUrl,
   type ResultadoImportacion,
+  subirFotoEquipo,
 } from './equiposApi'
 import { listarProveedores } from './proveedoresApi'
 import { listarSedes } from './sedesApi'
@@ -273,14 +276,13 @@ export function InventarioPage() {
               sedes={sedes}
               servicios={servicios}
               proveedores={proveedores}
-              onGuardar={async (datos) => {
-                if (editando === 'nuevo') {
-                  await crearEquipo(datos)
-                  setMensaje('Equipo registrado.')
-                } else {
-                  await actualizarEquipo(editando.id, datos)
-                  setMensaje('Equipo actualizado.')
-                }
+              onGuardar={(datos) =>
+                editando === 'nuevo'
+                  ? crearEquipo(datos)
+                  : actualizarEquipo(editando.id, datos)
+              }
+              onFinalizado={async (msg) => {
+                setMensaje(msg)
                 setEditando(null)
                 await cargarEquipos()
               }}
@@ -511,6 +513,7 @@ function EquipoForm({
   servicios,
   proveedores,
   onGuardar,
+  onFinalizado,
   onError,
   onCancelar,
 }: {
@@ -518,12 +521,37 @@ function EquipoForm({
   sedes: Sede[]
   servicios: Servicio[]
   proveedores: Proveedor[]
-  onGuardar: (datos: DatosEquipo) => Promise<void>
+  onGuardar: (datos: DatosEquipo) => Promise<Equipo>
+  onFinalizado: (mensaje: string) => Promise<void> | void
   onError: (msg: string) => void
   onCancelar: () => void
 }) {
   const [f, setF] = useState<DatosEquipo>(() => estadoInicial(inicial))
   const [guardando, setGuardando] = useState(false)
+  const [fotoFile, setFotoFile] = useState<File | null>(null)
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null)
+  const [fotoQuitar, setFotoQuitar] = useState(false)
+
+  // Carga la foto existente (si la hay) para previsualizarla al editar.
+  useEffect(() => {
+    if (inicial?.id && inicial.foto_mime) {
+      obtenerFotoUrl(inicial.id).then((url) => {
+        if (url) setFotoPreview(url)
+      })
+    }
+  }, [inicial])
+
+  function elegirFoto(file: File | null) {
+    setFotoFile(file)
+    setFotoQuitar(false)
+    setFotoPreview(file ? URL.createObjectURL(file) : null)
+  }
+
+  function quitarFoto() {
+    setFotoFile(null)
+    setFotoPreview(null)
+    setFotoQuitar(true)
+  }
 
   function set<K extends keyof DatosEquipo>(campo: K, valor: DatosEquipo[K]) {
     setF((prev) => ({ ...prev, [campo]: valor }))
@@ -548,7 +576,7 @@ function EquipoForm({
     e.preventDefault()
     setGuardando(true)
     try {
-      await onGuardar({
+      const guardado = await onGuardar({
         ...f,
         codigo_interno: f.codigo_interno.trim(),
         serial_fabricante: f.serial_fabricante.trim(),
@@ -557,6 +585,13 @@ function EquipoForm({
           .map((r) => r.trim())
           .filter(Boolean),
       })
+      // Segundo paso: gestionar la foto ya con el id del equipo.
+      if (fotoFile) {
+        await subirFotoEquipo(guardado.id, fotoFile)
+      } else if (fotoQuitar && inicial?.foto_mime) {
+        await eliminarFotoEquipo(guardado.id)
+      }
+      await onFinalizado(inicial ? 'Equipo actualizado.' : 'Equipo registrado.')
     } catch (err) {
       onError(detalleError(err, 'No se pudo guardar el equipo.'))
     } finally {
@@ -609,6 +644,30 @@ function EquipoForm({
             ))}
           </select>
         </label>
+      </div>
+
+      <div className="foto-field">
+        <div className="foto-preview">
+          {fotoPreview ? (
+            <img src={fotoPreview} alt="Foto del equipo" />
+          ) : (
+            <span className="muted small">Sin foto</span>
+          )}
+        </div>
+        <div className="foto-acciones">
+          <span className="field-label">Foto del equipo</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => elegirFoto(e.target.files?.[0] ?? null)}
+          />
+          {fotoPreview && (
+            <button type="button" className="btn-ghost" onClick={quitarFoto}>
+              Quitar foto
+            </button>
+          )}
+          <span className="muted small">JPG, PNG o WEBP · máx. 5 MB</span>
+        </div>
       </div>
 
       <h4 className="grupo-tit">Ubicación</h4>

@@ -116,6 +116,7 @@ class EquipoRead(EquipoBase):
 
     id: int
     codigo_interno: str
+    foto_mime: str | None = None
     sede_nombre: str | None = None
     servicio_nombre: str | None = None
     proveedor_nombre: str | None = None

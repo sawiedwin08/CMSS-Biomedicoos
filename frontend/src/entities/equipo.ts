@@ -82,6 +82,8 @@ export interface Equipo {
   equipo_fijo: boolean
   accesorios: string | null
   descripcion_funcional: string | null
+  // Foto (metadato; los bytes se piden aparte)
+  foto_mime: string | null
   // Nombres resueltos (lectura)
   sede_nombre: string | null
   servicio_nombre: string | null
