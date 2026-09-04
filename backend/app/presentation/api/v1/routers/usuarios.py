@@ -5,6 +5,7 @@ from app.application.dto.usuarios import DatosActualizarUsuario, DatosNuevoUsuar
 from app.application.use_cases.usuarios.actualizar_usuario import ActualizarUsuario
 from app.application.use_cases.usuarios.asignar_rol import AsignarRolUsuario
 from app.application.use_cases.usuarios.crear_usuario import CrearUsuario
+from app.application.use_cases.usuarios.restablecer_password import RestablecerPassword
 from app.presentation.api.deps import (
     CurrentUser,
     Hasher,
@@ -14,6 +15,7 @@ from app.presentation.api.deps import (
 )
 from app.presentation.schemas.usuarios import (
     AsignarRol,
+    CambiarPassword,
     UsuarioCreate,
     UsuarioRead,
     UsuarioUpdate,
@@ -88,6 +90,22 @@ def actualizar_usuario(
         ),
     )
     return UsuarioRead.model_validate(actualizado)
+
+
+@router.put(
+    "/{usuario_id}/password",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Restablecer la contraseña de un usuario (admin)",
+    dependencies=[Depends(require_permiso("usuarios:editar"))],
+)
+def restablecer_password(
+    usuario_id: int,
+    datos: CambiarPassword,
+    actor: CurrentUser,
+    usuarios: UsuarioRepo,
+    hasher: Hasher,
+) -> None:
+    RestablecerPassword(usuarios, hasher).ejecutar(actor, usuario_id, datos.password)
 
 
 @router.put(

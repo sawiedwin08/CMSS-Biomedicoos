@@ -1,3 +1,4 @@
+import { Hospital } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -23,7 +24,9 @@ export function LauncherPage() {
     <div className="launcher">
       <header className="launcher-top">
         <div className="launcher-brand">
-          <span className="brand-icon">🏥</span>
+          <span className="brand-icon">
+            <Hospital size={24} />
+          </span>
           <span>Sistema de Gestión CMVA</span>
         </div>
         <div className="topbar-right">

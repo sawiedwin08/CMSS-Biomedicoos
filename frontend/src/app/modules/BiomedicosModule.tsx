@@ -1,3 +1,11 @@
+import {
+  Boxes,
+  Building2,
+  HeartPulse,
+  Home,
+  Store,
+  Truck,
+} from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { DashboardPage } from '../../features/dashboard/DashboardPage'
@@ -19,12 +27,12 @@ export function BiomedicosModule() {
 
   const verInv = puede('inventario:ver')
   const items: NavItem[] = [
-    { to: '', icono: '🏠', texto: 'Inicio', visible: true },
-    { to: 'inventario', icono: '🗂️', texto: 'Inventario', visible: verInv },
-    { to: 'equipos', icono: '🩻', texto: 'Equipos', visible: verInv },
-    { to: 'sedes', icono: '🏢', texto: 'Sedes', visible: verInv },
-    { to: 'servicios', icono: '🏬', texto: 'Servicios', visible: verInv },
-    { to: 'proveedores', icono: '🚚', texto: 'Proveedores', visible: verInv },
+    { to: '', icono: Home, texto: 'Inicio', visible: true },
+    { to: 'inventario', icono: Boxes, texto: 'Inventario', visible: verInv },
+    { to: 'equipos', icono: HeartPulse, texto: 'Equipos', visible: verInv },
+    { to: 'sedes', icono: Building2, texto: 'Sedes', visible: verInv },
+    { to: 'servicios', icono: Store, texto: 'Servicios', visible: verInv },
+    { to: 'proveedores', icono: Truck, texto: 'Proveedores', visible: verInv },
   ]
 
   return (

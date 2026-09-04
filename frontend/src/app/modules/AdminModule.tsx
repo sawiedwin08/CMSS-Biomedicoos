@@ -1,3 +1,4 @@
+import { Blocks, ShieldCheck, Users } from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { ModulosPage } from '../../features/plataforma/ModulosPage'
@@ -18,9 +19,9 @@ export function AdminModule() {
   const verRoles = puede('roles:ver')
   const verModulos = puede('modulos:ver')
   const items: NavItem[] = [
-    { to: 'usuarios', icono: '👥', texto: 'Usuarios', visible: verUsuarios },
-    { to: 'roles', icono: '🔐', texto: 'Roles y permisos', visible: verRoles },
-    { to: 'modulos', icono: '🧩', texto: 'Módulos', visible: verModulos },
+    { to: 'usuarios', icono: Users, texto: 'Usuarios', visible: verUsuarios },
+    { to: 'roles', icono: ShieldCheck, texto: 'Roles y permisos', visible: verRoles },
+    { to: 'modulos', icono: Blocks, texto: 'Módulos', visible: verModulos },
   ]
 
   // Primer destino disponible según permisos.
