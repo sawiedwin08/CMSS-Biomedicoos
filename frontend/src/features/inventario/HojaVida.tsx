@@ -1,3 +1,4 @@
+import { Printer } from 'lucide-react'
 import { createPortal } from 'react-dom'
 
 import logo from '../../assets/logo-valle-atriz.png'
@@ -82,8 +83,8 @@ export function HojaVida({
   return createPortal(
     <div className="hv-overlay">
       <div className="hv-barra no-print">
-        <button className="btn-primary" onClick={() => window.print()}>
-          🖨️ Imprimir / Guardar como PDF
+        <button className="btn-primary btn-ico" onClick={() => window.print()}>
+          <Printer size={16} /> Imprimir / Guardar como PDF
         </button>
         <button className="btn-ghost" onClick={onCerrar}>
           Cerrar

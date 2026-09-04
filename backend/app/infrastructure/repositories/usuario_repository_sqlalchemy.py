@@ -91,6 +91,13 @@ class UsuarioRepositorySQLAlchemy:
         self._session.refresh(model)
         return self._a_entidad(model)
 
+    def actualizar_password(self, usuario_id: int, hashed_password: str) -> None:
+        model = self._session.get(UsuarioModel, usuario_id)
+        if model is None:
+            raise RecursoNoEncontrado(f"El usuario {usuario_id} no existe.")
+        model.hashed_password = hashed_password
+        self._session.commit()
+
     def listar(self) -> list[Usuario]:
         models = self._session.scalars(select(UsuarioModel).order_by(UsuarioModel.id))
         return [self._a_entidad(m) for m in models]
