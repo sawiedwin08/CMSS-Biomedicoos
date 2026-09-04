@@ -14,6 +14,7 @@ from app.presentation.api.v1.routers import (
     roles,
     sedes,
     servicios,
+    tardanzas,
     usuarios,
 )
 
@@ -50,6 +51,7 @@ def crear_app() -> FastAPI:
     app.include_router(proveedores.router, prefix=settings.API_V1_PREFIX)
     app.include_router(equipos.router, prefix=settings.API_V1_PREFIX)
     app.include_router(modulos.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(tardanzas.router, prefix=settings.API_V1_PREFIX)
 
     @app.get("/", include_in_schema=False)
     def raiz() -> RedirectResponse:

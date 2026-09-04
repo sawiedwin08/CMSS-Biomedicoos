@@ -47,6 +47,14 @@ from app.infrastructure.repositories.servicio_repository_sqlalchemy import (
 from app.infrastructure.repositories.usuario_repository_sqlalchemy import (
     UsuarioRepositorySQLAlchemy,
 )
+from app.domain.repositories.department_repository import DepartmentRepository
+from app.domain.repositories.schedule_repository import ScheduleRepository
+from app.infrastructure.repositories.department_repository_sqlalchemy import (
+    DepartmentRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.schedule_repository_sqlalchemy import (
+    ScheduleRepositorySQLAlchemy,
+)
 from app.infrastructure.services.security import BcryptPasswordHasher, JwtTokenService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
@@ -87,6 +95,14 @@ def get_modulo_repository(db: DbSession) -> ModuloRepository:
     return ModuloRepositorySQLAlchemy(db)
 
 
+def get_department_repository(db: DbSession) -> DepartmentRepository:
+    return DepartmentRepositorySQLAlchemy(db)
+
+
+def get_schedule_repository(db: DbSession) -> ScheduleRepository:
+    return ScheduleRepositorySQLAlchemy(db)
+
+
 # --- Servicios de seguridad ---
 def get_password_hasher() -> PasswordHasher:
     return BcryptPasswordHasher()
@@ -104,6 +120,8 @@ ServicioRepo = Annotated[ServicioRepository, Depends(get_servicio_repository)]
 ProveedorRepo = Annotated[ProveedorRepository, Depends(get_proveedor_repository)]
 EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
 ModuloRepo = Annotated[ModuloRepository, Depends(get_modulo_repository)]
+DepartmentRepo = Annotated[DepartmentRepository, Depends(get_department_repository)]
+ScheduleRepo = Annotated[ScheduleRepository, Depends(get_schedule_repository)]
 Hasher = Annotated[PasswordHasher, Depends(get_password_hasher)]
 Tokens = Annotated[TokenService, Depends(get_token_service)]
 
