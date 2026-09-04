@@ -1,4 +1,4 @@
-"""Entidad de Dominio - AppSetting (Módulo Tardanzas - RF-031)."""
+"""Entidad de Dominio - AppSetting."""
 from dataclasses import dataclass
 from datetime import datetime
 

@@ -1,4 +1,4 @@
-"""Configuración global de la aplicación (Módulo Tardanzas - RF-031)."""
+"""Configuración global de la aplicación."""
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
