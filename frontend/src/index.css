@@ -69,7 +69,11 @@ h1 {
 }
 
 .brand-icon {
-  font-size: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem; /* para iconos de módulo (emoji) */
+  color: var(--azul);
 }
 
 .field {
@@ -178,9 +182,11 @@ h1 {
 }
 
 .nav-ico {
-  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
-  text-align: center;
+  flex-shrink: 0;
 }
 
 .main {
@@ -868,16 +874,33 @@ h1 {
 }
 
 .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
-  padding: 4px;
+  color: var(--muted);
+  padding: 5px;
   border-radius: 6px;
 }
 
 .icon-btn:hover {
   background: var(--fondo);
+  color: var(--texto);
+}
+
+/* Botón con icono + texto (Lucide) */
+.btn-ico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Icono suelto alineado con texto */
+.icono-inline {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ---------- Modal ---------- */
@@ -1162,4 +1185,28 @@ h1 {
 
 .modulo-check.inactivo {
   opacity: 0.6;
+}
+
+/* ---------- Restablecer contraseña (edición de usuario) ---------- */
+.reset-pass {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--borde);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reset-pass-row {
+  display: flex;
+  gap: 8px;
+}
+
+.reset-pass-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
 }

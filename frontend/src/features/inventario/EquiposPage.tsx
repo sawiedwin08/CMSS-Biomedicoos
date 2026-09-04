@@ -1,3 +1,4 @@
+import { Eye, FileText } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import {
@@ -85,7 +86,7 @@ export function EquiposPage() {
       ancho: 50,
       celda: (e) => (
         <button className="icon-btn" title="Ver resumen" onClick={() => abrirResumen(e)}>
-          👁️
+          <Eye size={16} />
         </button>
       ),
     },
@@ -193,8 +194,8 @@ function ResumenModal({
           <h3>
             {e.nombre} <span className="muted">· {e.codigo_interno}</span>
           </h3>
-          <button className="btn-primary" onClick={onGenerarHoja}>
-            📄 Generar hoja de vida
+          <button className="btn-primary btn-ico" onClick={onGenerarHoja}>
+            <FileText size={16} /> Generar hoja de vida
           </button>
         </div>
 

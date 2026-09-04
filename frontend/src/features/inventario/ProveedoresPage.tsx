@@ -1,3 +1,4 @@
+import { Pencil, Trash2 } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import type { Proveedor } from '../../entities/proveedor'
@@ -86,12 +87,12 @@ export function ProveedoresPage() {
                 setEditando(p)
               }}
             >
-              ✏️
+              <Pencil size={16} />
             </button>
           )}
           {puedeEliminar && (
             <button className="icon-btn" title="Eliminar" onClick={() => borrar(p)}>
-              🗑️
+              <Trash2 size={16} />
             </button>
           )}
         </>

@@ -1,3 +1,4 @@
+import { ArrowLeft, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 
@@ -6,7 +7,7 @@ import { titulo } from '../shared/format'
 
 export interface NavItem {
   to: string
-  icono: string
+  icono: LucideIcon
   texto: string
   visible: boolean
 }
@@ -37,24 +38,33 @@ export function ModuleShell({
         </div>
 
         <NavLink to="/" className="nav-item volver">
-          <span className="nav-ico">←</span>
+          <span className="nav-ico">
+            <ArrowLeft size={18} />
+          </span>
           <span>Módulos</span>
         </NavLink>
 
         <nav className="sidebar-nav">
           {items
             .filter((i) => i.visible)
-            .map((i) => (
-              <NavLink
-                key={i.to}
-                to={i.to ? `${basePath}/${i.to}` : basePath}
-                end={i.to === ''}
-                className={({ isActive }) => (isActive ? 'nav-item activo' : 'nav-item')}
-              >
-                <span className="nav-ico">{i.icono}</span>
-                <span>{i.texto}</span>
-              </NavLink>
-            ))}
+            .map((i) => {
+              const Icono = i.icono
+              return (
+                <NavLink
+                  key={i.to}
+                  to={i.to ? `${basePath}/${i.to}` : basePath}
+                  end={i.to === ''}
+                  className={({ isActive }) =>
+                    isActive ? 'nav-item activo' : 'nav-item'
+                  }
+                >
+                  <span className="nav-ico">
+                    <Icono size={18} />
+                  </span>
+                  <span>{i.texto}</span>
+                </NavLink>
+              )
+            })}
         </nav>
       </aside>
 

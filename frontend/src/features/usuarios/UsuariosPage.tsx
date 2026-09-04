@@ -1,3 +1,4 @@
+import { Lock, Pencil } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import type { Rol } from '../../entities/rol'
@@ -6,7 +7,12 @@ import { useAuth } from '../../shared/auth/AuthContext'
 import { titulo } from '../../shared/format'
 import { type Columna, DataTable } from '../../shared/ui/DataTable'
 import { listarRoles } from '../roles/rolesApi'
-import { actualizarUsuario, crearUsuario, listarUsuarios } from './usuariosApi'
+import {
+  actualizarUsuario,
+  crearUsuario,
+  listarUsuarios,
+  restablecerPassword,
+} from './usuariosApi'
 
 function detalleError(err: unknown, porDefecto: string): string {
   return (
@@ -73,7 +79,15 @@ export function UsuariosPage() {
       header: 'Nombre',
       celda: (u) => (
         <>
-          {u.es_protegido && <span title="Usuario protegido">🔒 </span>}
+          {u.es_protegido && (
+            <span
+              className="icono-inline"
+              title="Usuario protegido"
+              style={{ marginLeft: 4 }}
+            >
+              <Lock size={14} />
+            </span>
+          )}
           {u.nombre}
           {yo?.id === u.id && <span className="muted small"> (tú)</span>}
         </>
@@ -106,11 +120,11 @@ export function UsuariosPage() {
               setEditando(u)
             }}
           >
-            ✏️
+            <Pencil size={16} />
           </button>
         ) : u.es_protegido && u.id !== yo?.id ? (
-          <span className="muted" title="Protegido: no editable">
-            🔒
+          <span className="muted icono-inline" title="Protegido: no editable">
+            <Lock size={16} />
           </span>
         ) : null,
     },
@@ -194,6 +208,27 @@ function EditarUsuarioModal({
   const [activo, setActivo] = useState(usuario.activo)
   const [protegido, setProtegido] = useState(usuario.es_protegido)
   const [guardando, setGuardando] = useState(false)
+  const [nuevaPassword, setNuevaPassword] = useState('')
+  const [reseteando, setReseteando] = useState(false)
+  const [resetMsg, setResetMsg] = useState<string | null>(null)
+
+  async function onResetPassword() {
+    if (nuevaPassword.length < 8) {
+      onError('La contraseña debe tener al menos 8 caracteres.')
+      return
+    }
+    setReseteando(true)
+    setResetMsg(null)
+    try {
+      await restablecerPassword(usuario.id, nuevaPassword)
+      setNuevaPassword('')
+      setResetMsg('Contraseña restablecida.')
+    } catch (err) {
+      onError(detalleError(err, 'No se pudo restablecer la contraseña.'))
+    } finally {
+      setReseteando(false)
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -254,6 +289,28 @@ function EditarUsuarioModal({
             <span>🔒 Usuario protegido (solo él mismo puede editarlo)</span>
           </label>
         )}
+
+        <div className="reset-pass">
+          <span className="field-label">Restablecer contraseña</span>
+          <div className="reset-pass-row">
+            <input
+              type="password"
+              placeholder="Nueva contraseña (mín. 8)"
+              value={nuevaPassword}
+              onChange={(e) => setNuevaPassword(e.target.value)}
+              minLength={8}
+            />
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={reseteando || nuevaPassword.length < 8}
+              onClick={onResetPassword}
+            >
+              {reseteando ? 'Guardando…' : 'Restablecer'}
+            </button>
+          </div>
+          {resetMsg && <div className="alert-ok">{resetMsg}</div>}
+        </div>
 
         <div className="modal-actions">
           <button type="button" className="btn-ghost" onClick={onCerrar}>
