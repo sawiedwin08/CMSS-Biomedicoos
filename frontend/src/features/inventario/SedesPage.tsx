@@ -1,3 +1,4 @@
+import { Pencil, Trash2 } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import type { Sede } from '../../entities/sede'
@@ -82,12 +83,12 @@ export function SedesPage() {
                 setEditando(s)
               }}
             >
-              ✏️
+              <Pencil size={16} />
             </button>
           )}
           {puedeEliminar && (
             <button className="icon-btn" title="Eliminar" onClick={() => borrar(s)}>
-              🗑️
+              <Trash2 size={16} />
             </button>
           )}
         </>

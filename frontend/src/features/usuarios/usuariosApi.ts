@@ -39,3 +39,11 @@ export async function actualizarUsuario(
   const { data } = await api.put<Usuario>(`/usuarios/${usuarioId}`, payload)
   return data
 }
+
+/** Restablece la contraseña de un usuario (acción de administrador). */
+export async function restablecerPassword(
+  usuarioId: number,
+  password: string,
+): Promise<void> {
+  await api.put(`/usuarios/${usuarioId}/password`, { password })
+}

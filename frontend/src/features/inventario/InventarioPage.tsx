@@ -1,3 +1,4 @@
+import { Pencil, Trash2 } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import {
@@ -158,12 +159,12 @@ export function InventarioPage() {
                 setEditando(e)
               }}
             >
-              ✏️
+              <Pencil size={16} />
             </button>
           )}
           {puedeEliminar && (
             <button className="icon-btn" title="Eliminar" onClick={() => borrar(e)}>
-              🗑️
+              <Trash2 size={16} />
             </button>
           )}
         </>

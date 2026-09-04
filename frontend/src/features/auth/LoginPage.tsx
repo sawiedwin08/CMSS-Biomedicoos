@@ -1,3 +1,4 @@
+import { Hospital } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 
 import { useAuth } from '../../shared/auth/AuthContext'
@@ -31,10 +32,12 @@ export function LoginPage() {
     <div className="login-wrap">
       <form className="card login-card" onSubmit={onSubmit}>
         <div className="brand">
-          <span className="brand-icon">🩺</span>
+          <span className="brand-icon">
+            <Hospital size={60} />
+          </span>
           <div>
-            <h1>Sistema de Gestión CMVA</h1>
-            <p className="muted">Gestión de CMVA</p>
+            <h1>Sistema de Gestión</h1>
+            <p className="muted">Centro Medico Valle de Atriz</p>
           </div>
         </div>
 
