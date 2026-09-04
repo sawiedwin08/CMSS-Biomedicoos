@@ -42,10 +42,6 @@ CATALOGO: list[tuple[str, str, str]] = [
     ("roles", "eliminar", "Eliminar roles"),
     ("modulos", "ver", "Ver módulos de la plataforma"),
     ("modulos", "asignar", "Asignar módulos de acceso a los roles"),
-    ("tardanzas", "ver", "Ver reportes de tardanzas"),
-    ("tardanzas", "crear", "Crear departamentos y horarios"),
-    ("tardanzas", "editar", "Editar departamentos y horarios"),
-    ("tardanzas", "eliminar", "Eliminar departamentos y horarios"),
 ]
 
 # --- Roles de sistema: (nombre, descripción) ---
@@ -69,7 +65,7 @@ MODULOS_SISTEMA: list[tuple[str, str, str, str, int]] = [
     (
         "tardanzas",
         "Reporte de Tardanzas",
-        "Gestión de llegadas tarde: departamentos, horarios y análisis de tardanzas.",
+        "Módulo en construcción.",
         "⏰",
         2,
     ),

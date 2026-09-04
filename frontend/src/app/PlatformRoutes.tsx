@@ -11,8 +11,8 @@ export function PlatformRoutes() {
     <Routes>
       <Route path="/" element={<LauncherPage />} />
       <Route path="/m/biomedicos/*" element={<BiomedicosModule />} />
-      <Route path="/m/admin/*" element={<AdminModule />} />
       <Route path="/m/tardanzas/*" element={<TardianzasModule />} />
+      <Route path="/m/admin/*" element={<AdminModule />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
