@@ -42,6 +42,10 @@ CATALOGO: list[tuple[str, str, str]] = [
     ("roles", "eliminar", "Eliminar roles"),
     ("modulos", "ver", "Ver módulos de la plataforma"),
     ("modulos", "asignar", "Asignar módulos de acceso a los roles"),
+    ("tardanzas", "ver", "Ver reportes de tardanzas"),
+    ("tardanzas", "crear", "Crear departamentos y horarios"),
+    ("tardanzas", "editar", "Editar departamentos y horarios"),
+    ("tardanzas", "eliminar", "Eliminar departamentos y horarios"),
 ]
 
 # --- Roles de sistema: (nombre, descripción) ---
@@ -63,6 +67,13 @@ MODULOS_SISTEMA: list[tuple[str, str, str, str, int]] = [
         1,
     ),
     (
+        "tardanzas",
+        "Reporte de Tardanzas",
+        "Gestión de llegadas tarde: departamentos, horarios y análisis de tardanzas.",
+        "⏰",
+        2,
+    ),
+    (
         "admin",
         "Administración",
         "Usuarios, roles y módulos de la plataforma.",
@@ -73,11 +84,11 @@ MODULOS_SISTEMA: list[tuple[str, str, str, str, int]] = [
 
 # --- Acceso por defecto a módulos según el rol ---
 MODULOS_POR_ROL: dict[str, set[str]] = {
-    "admin": {"biomedicos", "admin"},
-    "coordinador": {"biomedicos", "admin"},
-    "ingeniero_biomedico": {"biomedicos"},
-    "tecnico": {"biomedicos"},
-    "consulta": {"biomedicos"},
+    "admin": {"biomedicos", "tardanzas", "admin"},
+    "coordinador": {"biomedicos", "tardanzas", "admin"},
+    "ingeniero_biomedico": {"biomedicos", "tardanzas"},
+    "tecnico": {"biomedicos", "tardanzas"},
+    "consulta": {"biomedicos", "tardanzas"},
 }
 
 
