@@ -1,4 +1,4 @@
-"""Punto de entrada de la API — Sistema de Gestión de Activos Biomédicos."""
+"""Punto de entrada de la API — Sistema de Gestión de Activos Biomédicos + Asistencia."""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -20,16 +20,17 @@ from app.presentation.api.v1.routers import (
 
 def crear_app() -> FastAPI:
     app = FastAPI(
-        title="CMSS-Biomédico API",
+        title="CMSS-Biomédico + Asistencia API",
         description=(
-            "API del Sistema de Gestión de Activos Biomédicos. "
+            "API del Sistema de Gestión de Activos Biomédicos + Módulo de Asistencia y Tardanzas. "
             "Documentación interactiva generada automáticamente (Swagger / OpenAPI)."
         ),
-        version="0.1.0",
+        version="1.0.0",
         docs_url="/docs" if settings.DEBUG else None,
         redoc_url="/redoc" if settings.DEBUG else None,
     )
 
+    print(f"CORS origins: {settings.cors_origins}")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -40,7 +41,7 @@ def crear_app() -> FastAPI:
 
     registrar_manejadores_errores(app)
 
-    # Routers versionados
+    # Routers versionados - CMSS (con autenticación)
     app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
     app.include_router(usuarios.router, prefix=settings.API_V1_PREFIX)
     app.include_router(roles.router, prefix=settings.API_V1_PREFIX)
@@ -50,6 +51,7 @@ def crear_app() -> FastAPI:
     app.include_router(proveedores.router, prefix=settings.API_V1_PREFIX)
     app.include_router(equipos.router, prefix=settings.API_V1_PREFIX)
     app.include_router(modulos.router, prefix=settings.API_V1_PREFIX)
+
 
     @app.get("/", include_in_schema=False)
     def raiz() -> RedirectResponse:

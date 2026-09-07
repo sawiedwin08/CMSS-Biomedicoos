@@ -1,4 +1,4 @@
-import { Eye, FileText } from 'lucide-react'
+import { Eye, FileText, Folder, X, FolderOpen } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import {
@@ -8,10 +8,14 @@ import {
   etiquetaPropiedad,
 } from '../../entities/equipo'
 import type { Sede } from '../../entities/sede'
+import { useAuth } from '../../shared/auth/AuthContext'
 import { type Columna, DataTable } from '../../shared/ui/DataTable'
 import { type FiltroEquipos, listarEquipos, obtenerFotoUrl } from './equiposApi'
+import { DocumentosEquipo } from './DocumentosEquipo'
+import { HistorialMovimientos } from './HistorialMovimientos'
 import { HojaVida } from './HojaVida'
 import { listarSedes } from './sedesApi'
+import { listarDocumentos, type DocumentoEquipo } from './documentosApi'
 
 function detalleError(err: unknown, porDefecto: string): string {
   return (
@@ -187,6 +191,30 @@ function ResumenModal({
   onGenerarHoja: () => void
   onCerrar: () => void
 }) {
+  const { puede } = useAuth()
+  const puedeEditar = puede('inventario:editar')
+  const [verDocs, setVerDocs] = useState(false)
+  const [documentos, setDocumentos] = useState<DocumentoEquipo[]>([])
+  const [cargandoDocs, setCargandoDocs] = useState(false)
+  const [años, setAños] = useState<number[]>([])
+  const [añoSeleccionado, setAñoSeleccionado] = useState<number | null>(null)
+  const [verDocumentacion, setVerDocumentacion] = useState(false)
+
+  useEffect(() => {
+    listarDocumentos(e.id)
+      .then((docs) => {
+        setDocumentos(docs)
+        // Extraer años solo de documentos de mantenimiento (que tienen año_documento)
+        const añosUnicos = Array.from(
+          new Set(docs.filter(d => d.año_documento).map((d) => d.año_documento!))
+        )
+          .sort((a, b) => b - a)
+          .slice(0, 3)
+        setAños(añosUnicos)
+      })
+      .catch(() => setDocumentos([]))
+  }, [e.id])
+
   return (
     <div className="modal-overlay" onClick={onCerrar}>
       <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
@@ -194,18 +222,51 @@ function ResumenModal({
           <h3>
             {e.nombre} <span className="muted">· {e.codigo_interno}</span>
           </h3>
-          <button className="btn-primary btn-ico" onClick={onGenerarHoja}>
-            <FileText size={16} /> Generar hoja de vida
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn-primary btn-ico" onClick={() => setVerDocs(true)}>
+              <Folder size={16} /> Documentos del equipo
+            </button>
+            <button className="btn-primary btn-ico" onClick={onGenerarHoja}>
+              <FileText size={16} /> Generar hoja de vida
+            </button>
+          </div>
         </div>
 
         <div className="rz-cuerpo">
-          <div className="rz-foto">
-            {fotoUrl ? (
-              <img src={fotoUrl} alt="Foto del equipo" />
-            ) : (
-              <span className="muted small">Sin foto</span>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div className="rz-foto">
+              {fotoUrl ? (
+                <img src={fotoUrl} alt="Foto del equipo" />
+              ) : (
+                <span className="muted small">Sin foto</span>
+              )}
+            </div>
+            <div>
+              <h5 style={{ margin: '12px 0 8px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Documentos
+              </h5>
+              <div className="rz-años">
+                <button
+                  className="año-folder"
+                  onClick={() => setVerDocumentacion(true)}
+                  title="Documentación del equipo"
+                >
+                  <FolderOpen size={16} />
+                  <span>Documentación</span>
+                </button>
+                {años.map((año) => (
+                  <button
+                    key={año}
+                    className="año-folder"
+                    onClick={() => setAñoSeleccionado(año)}
+                    title={`Documentos del año ${año}`}
+                  >
+                    <FolderOpen size={16} />
+                    <span>{año}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="rz-datos">
             <h4 className="grupo-tit">Identificación</h4>
@@ -252,6 +313,343 @@ function ResumenModal({
           </button>
         </div>
       </div>
+
+      {verDocs && (
+        <div className="modal-overlay" onClick={() => setVerDocs(false)}>
+          <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
+            <div className="detail-head">
+              <h3>
+                <Folder size={20} /> Documentos del equipo
+              </h3>
+              <button
+                className="btn-ghost"
+                onClick={() => setVerDocs(false)}
+                style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <DocumentosEquipo
+              equipoId={e.id}
+              puedeEditar={puedeEditar}
+              onDocumentosChanged={async () => {
+                const docs = await listarDocumentos(e.id)
+                setDocumentos(docs)
+                const añosUnicos = Array.from(
+                  new Set(docs.filter(d => d.año_documento).map((d) => d.año_documento!))
+                )
+                  .sort((a, b) => b - a)
+                  .slice(0, 3)
+                setAños(añosUnicos)
+              }}
+            />
+            <HistorialMovimientos
+              equipoId={e.id}
+              puedeEditar={puedeEditar}
+            />
+          </div>
+        </div>
+      )}
+
+      {añoSeleccionado && (
+        <DocumentosAñoModal
+          equipoId={e.id}
+          año={añoSeleccionado}
+          documentos={documentos}
+          puedeEditar={puedeEditar}
+          onCerrar={() => setAñoSeleccionado(null)}
+        />
+      )}
+
+      {verDocumentacion && (
+        <DocumentosDocumentacionModal
+          equipoId={e.id}
+          documentos={documentos}
+          puedeEditar={puedeEditar}
+          onCerrar={() => setVerDocumentacion(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function DocumentosAñoModal({
+  equipoId,
+  año,
+  documentos,
+  puedeEditar,
+  onCerrar,
+}: {
+  equipoId: number
+  año: number
+  documentos: DocumentoEquipo[]
+  puedeEditar: boolean
+  onCerrar: () => void
+}) {
+  const [localDocs, setLocalDocs] = useState(documentos)
+  const [docSeleccionado, setDocSeleccionado] = useState<DocumentoEquipo | null>(null)
+  const [urlBlobDoc, setUrlBlobDoc] = useState<string | null>(null)
+
+  const docsDelAño = localDocs.filter(
+    (d) => d.año_documento === año
+  )
+
+  async function visualizar(doc: DocumentoEquipo) {
+    try {
+      const { descargarDocumento } = await import('./documentosApi')
+      const blob = await descargarDocumento(equipoId, doc.id)
+      const url = URL.createObjectURL(blob)
+      setUrlBlobDoc(url)
+      setDocSeleccionado(doc)
+    } catch {
+      alert('Error al cargar el documento')
+    }
+  }
+
+  function cerrarVisualizacion() {
+    if (urlBlobDoc) URL.revokeObjectURL(urlBlobDoc)
+    setDocSeleccionado(null)
+    setUrlBlobDoc(null)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onCerrar}>
+      <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
+        <div className="detail-head">
+          <h3>Documentos - Año {año}</h3>
+          <button
+            className="btn-ghost"
+            onClick={onCerrar}
+            style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div style={{ padding: '16px' }}>
+          {docsDelAño.length === 0 ? (
+            <p className="muted">No hay documentos para este año</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {docsDelAño.map((doc) => (
+                <div
+                  key={doc.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px',
+                    background: 'var(--color-bg-secondary)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>
+                      {doc.nombre_archivo}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                      {doc.usuario?.nombre} • {new Date(doc.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="icon-btn"
+                      title="Visualizar"
+                      onClick={() => visualizar(doc)}
+                    >
+                      <Eye size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {docSeleccionado && urlBlobDoc && (
+        <div className="modal-overlay" onClick={cerrarVisualizacion}>
+          <div className="modal card" style={{ maxWidth: '90%', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
+            <div className="detail-head">
+              <h3>{docSeleccionado.nombre_archivo}</h3>
+              <button
+                className="btn-ghost"
+                onClick={cerrarVisualizacion}
+                style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: '16px', minHeight: '400px' }}>
+              {docSeleccionado.mime_type.includes('pdf') ? (
+                <iframe
+                  src={urlBlobDoc}
+                  style={{ width: '100%', height: '100%', minHeight: '600px', border: 'none' }}
+                  title={docSeleccionado.nombre_archivo}
+                />
+              ) : docSeleccionado.mime_type.startsWith('image/') ? (
+                <img
+                  src={urlBlobDoc}
+                  alt={docSeleccionado.nombre_archivo}
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                  <p>No se puede visualizar este tipo de archivo.</p>
+                  <button
+                    className="btn-primary"
+                    onClick={async () => {
+                      const { descargarDocumentoNombre } = await import('./documentosApi')
+                      await descargarDocumentoNombre(equipoId, docSeleccionado.id, docSeleccionado.nombre_archivo)
+                    }}
+                  >
+                    Descargar archivo
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DocumentosDocumentacionModal({
+  equipoId,
+  documentos,
+  puedeEditar,
+  onCerrar,
+}: {
+  equipoId: number
+  documentos: DocumentoEquipo[]
+  puedeEditar: boolean
+  onCerrar: () => void
+}) {
+  const [localDocs, setLocalDocs] = useState(documentos)
+  const [docSeleccionado, setDocSeleccionado] = useState<DocumentoEquipo | null>(null)
+  const [urlBlobDoc, setUrlBlobDoc] = useState<string | null>(null)
+
+  // Documentos sin año (documentación)
+  const docsDocumentacion = localDocs.filter((d) => !d.año_documento)
+
+  async function visualizar(doc: DocumentoEquipo) {
+    try {
+      const { descargarDocumento } = await import('./documentosApi')
+      const blob = await descargarDocumento(equipoId, doc.id)
+      const url = URL.createObjectURL(blob)
+      setUrlBlobDoc(url)
+      setDocSeleccionado(doc)
+    } catch {
+      alert('Error al cargar el documento')
+    }
+  }
+
+  function cerrarVisualizacion() {
+    if (urlBlobDoc) URL.revokeObjectURL(urlBlobDoc)
+    setDocSeleccionado(null)
+    setUrlBlobDoc(null)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onCerrar}>
+      <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
+        <div className="detail-head">
+          <h3>Documentación del Equipo</h3>
+          <button
+            className="btn-ghost"
+            onClick={onCerrar}
+            style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+        <div style={{ padding: '16px' }}>
+          {docsDocumentacion.length === 0 ? (
+            <p className="muted">No hay documentos en documentación</p>
+          ) : (
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {docsDocumentacion.map((doc) => (
+                <div
+                  key={doc.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px',
+                    background: 'var(--color-bg-secondary)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>
+                      {doc.nombre_archivo}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+                      {doc.usuario?.nombre} • {new Date(doc.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      className="icon-btn"
+                      title="Visualizar"
+                      onClick={() => visualizar(doc)}
+                    >
+                      <Eye size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {docSeleccionado && urlBlobDoc && (
+        <div className="modal-overlay" onClick={cerrarVisualizacion}>
+          <div className="modal card" style={{ maxWidth: '90%', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
+            <div className="detail-head">
+              <h3>{docSeleccionado.nombre_archivo}</h3>
+              <button
+                className="btn-ghost"
+                onClick={cerrarVisualizacion}
+                style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ flex: 1, minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {docSeleccionado.mime_type.includes('pdf') ? (
+                <iframe
+                  src={urlBlobDoc}
+                  style={{ width: '100%', height: '100%', minHeight: '600px', border: 'none' }}
+                  title={docSeleccionado.nombre_archivo}
+                />
+              ) : docSeleccionado.mime_type.startsWith('image/') ? (
+                <img
+                  src={urlBlobDoc}
+                  alt={docSeleccionado.nombre_archivo}
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                />
+              ) : (
+                <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+                  <p>No se puede visualizar este tipo de archivo.</p>
+                  <button
+                    className="btn-primary"
+                    onClick={async () => {
+                      const { descargarDocumentoNombre } = await import('./documentosApi')
+                      await descargarDocumentoNombre(equipoId, docSeleccionado.id, docSeleccionado.nombre_archivo)
+                    }}
+                  >
+                    Descargar archivo
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
