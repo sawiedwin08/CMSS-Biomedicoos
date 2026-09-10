@@ -128,3 +128,6 @@ class Equipo(Base, TimestampMixin):
     sede: Mapped["Sede | None"] = relationship()  # noqa: F821
     servicio: Mapped["Servicio | None"] = relationship()  # noqa: F821
     proveedor: Mapped["Proveedor | None"] = relationship()  # noqa: F821
+    documentos: Mapped[list["DocumentoEquipo"]] = relationship(  # noqa: F821
+        back_populates="equipo", cascade="all, delete-orphan"
+    )
