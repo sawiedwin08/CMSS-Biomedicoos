@@ -223,7 +223,8 @@ export function DocumentosEquipo({
             <button
               type="submit"
               className="btn-primary btn-ico"
-              disabled={!archivoSeleccionado || subiendo}
+              disabled={!archivoSeleccionado || subiendo || (dondeVa === 'mantenimiento' && !año)}
+              title={dondeVa === 'mantenimiento' && !año ? 'Selecciona un año' : ''}
             >
               <Upload size={16} />{' '}
               {subiendo ? 'Subiendo…' : 'Subir documento'}
