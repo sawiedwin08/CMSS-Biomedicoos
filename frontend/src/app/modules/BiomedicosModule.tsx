@@ -5,6 +5,7 @@ import {
   Home,
   Store,
   Truck,
+  Wrench,
 } from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
@@ -14,6 +15,7 @@ import { InventarioPage } from '../../features/inventario/InventarioPage'
 import { ProveedoresPage } from '../../features/inventario/ProveedoresPage'
 import { SedesPage } from '../../features/inventario/SedesPage'
 import { ServiciosPage } from '../../features/inventario/ServiciosPage'
+import { MantenimientoPage } from '../../features/mantenimiento/MantenimientoPage'
 import { useAuth } from '../../shared/auth/AuthContext'
 import { ModuleShell, type NavItem } from '../ModuleShell'
 
@@ -26,6 +28,7 @@ export function BiomedicosModule() {
   }
 
   const verInv = puede('inventario:ver')
+  const verMant = puede('mantenimiento:ver')
   const items: NavItem[] = [
     { to: '', icono: Home, texto: 'Inicio', visible: true },
     { to: 'inventario', icono: Boxes, texto: 'Inventario', visible: verInv },
@@ -33,6 +36,7 @@ export function BiomedicosModule() {
     { to: 'sedes', icono: Building2, texto: 'Sedes', visible: verInv },
     { to: 'servicios', icono: Store, texto: 'Servicios', visible: verInv },
     { to: 'proveedores', icono: Truck, texto: 'Proveedores', visible: verInv },
+    { to: 'mantenimiento', icono: Wrench, texto: 'Mantenimiento', visible: verMant },
   ]
 
   return (
@@ -49,6 +53,7 @@ export function BiomedicosModule() {
         {verInv && <Route path="sedes" element={<SedesPage />} />}
         {verInv && <Route path="servicios" element={<ServiciosPage />} />}
         {verInv && <Route path="proveedores" element={<ProveedoresPage />} />}
+        {verMant && <Route path="mantenimiento" element={<MantenimientoPage />} />}
         <Route path="*" element={<Navigate to="" replace />} />
       </Routes>
     </ModuleShell>

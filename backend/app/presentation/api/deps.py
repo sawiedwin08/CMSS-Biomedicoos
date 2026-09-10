@@ -47,6 +47,18 @@ from app.infrastructure.repositories.servicio_repository_sqlalchemy import (
 from app.infrastructure.repositories.usuario_repository_sqlalchemy import (
     UsuarioRepositorySQLAlchemy,
 )
+from app.infrastructure.repositories.documento_equipo_repository_sqlalchemy import (
+    DocumentoEquipoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.movimiento_equipo_repository_sqlalchemy import (
+    MovimientoEquipoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.orden_trabajo_repository_sqlalchemy import (
+    OrdenTrabajoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.checklist_equipo_repository_sqlalchemy import (
+    ChecklistEquipoRepositorySQLAlchemy,
+)
 from app.infrastructure.services.security import BcryptPasswordHasher, JwtTokenService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
@@ -87,6 +99,22 @@ def get_modulo_repository(db: DbSession) -> ModuloRepository:
     return ModuloRepositorySQLAlchemy(db)
 
 
+def get_documento_equipo_repository(db: DbSession) -> DocumentoEquipoRepositorySQLAlchemy:
+    return DocumentoEquipoRepositorySQLAlchemy(db)
+
+
+def get_movimiento_equipo_repository(db: DbSession) -> MovimientoEquipoRepositorySQLAlchemy:
+    return MovimientoEquipoRepositorySQLAlchemy(db)
+
+
+def get_orden_trabajo_repository(db: DbSession) -> OrdenTrabajoRepositorySQLAlchemy:
+    return OrdenTrabajoRepositorySQLAlchemy(db)
+
+
+def get_checklist_equipo_repository(db: DbSession) -> ChecklistEquipoRepositorySQLAlchemy:
+    return ChecklistEquipoRepositorySQLAlchemy(db)
+
+
 # --- Servicios de seguridad ---
 def get_password_hasher() -> PasswordHasher:
     return BcryptPasswordHasher()
@@ -104,6 +132,10 @@ ServicioRepo = Annotated[ServicioRepository, Depends(get_servicio_repository)]
 ProveedorRepo = Annotated[ProveedorRepository, Depends(get_proveedor_repository)]
 EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
 ModuloRepo = Annotated[ModuloRepository, Depends(get_modulo_repository)]
+DocumentoEquipoRepo = Annotated[DocumentoEquipoRepositorySQLAlchemy, Depends(get_documento_equipo_repository)]
+MovimientoEquipoRepo = Annotated[MovimientoEquipoRepositorySQLAlchemy, Depends(get_movimiento_equipo_repository)]
+OrdenTrabajoRepo = Annotated[OrdenTrabajoRepositorySQLAlchemy, Depends(get_orden_trabajo_repository)]
+ChecklistEquipoRepo = Annotated[ChecklistEquipoRepositorySQLAlchemy, Depends(get_checklist_equipo_repository)]
 Hasher = Annotated[PasswordHasher, Depends(get_password_hasher)]
 Tokens = Annotated[TokenService, Depends(get_token_service)]
 

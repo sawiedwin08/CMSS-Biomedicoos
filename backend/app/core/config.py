@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     # CORS
-    BACKEND_CORS_ORIGINS: str = "http://localhost:5173"
+    BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://localhost:5174"
 
     # Almacenamiento de archivos
     STORAGE_DIR: str = "./uploads"

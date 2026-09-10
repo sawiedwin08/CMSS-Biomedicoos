@@ -1,10 +1,12 @@
 import { Hospital } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../shared/auth/AuthContext'
 
 export function LoginPage() {
   const { login } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -16,6 +18,7 @@ export function LoginPage() {
     setEnviando(true)
     try {
       await login(email.trim(), password)
+      navigate('/') // Redirigir a módulos después del login
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status
       setError(

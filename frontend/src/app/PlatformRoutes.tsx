@@ -3,6 +3,8 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { LauncherPage } from '../features/plataforma/LauncherPage'
 import { AdminModule } from './modules/AdminModule'
 import { BiomedicosModule } from './modules/BiomedicosModule'
+import { GestionDocumentalModule } from './modules/GestionDocumentalModule'
+import { TardanzasModule } from './modules/TardanzasModule'
 
 /** Rutas de la plataforma: lanzador de módulos + cada módulo bajo /m/<slug>. */
 export function PlatformRoutes() {
@@ -11,6 +13,8 @@ export function PlatformRoutes() {
       <Route path="/" element={<LauncherPage />} />
       <Route path="/m/biomedicos/*" element={<BiomedicosModule />} />
       <Route path="/m/admin/*" element={<AdminModule />} />
+      <Route path="/m/tardanzas/*" element={<TardanzasModule />} />
+      <Route path="/m/documentos/*" element={<GestionDocumentalModule />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
