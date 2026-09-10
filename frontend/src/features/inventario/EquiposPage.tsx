@@ -1,4 +1,4 @@
-import { Eye, FileText, Folder, X, FolderOpen } from 'lucide-react'
+import { Eye, FileText, Folder, X, FolderOpen, MapPin, Wrench } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
 
 import {
@@ -14,6 +14,7 @@ import { type FiltroEquipos, listarEquipos, obtenerFotoUrl } from './equiposApi'
 import { DocumentosEquipo } from './DocumentosEquipo'
 import { HistorialMovimientos } from './HistorialMovimientos'
 import { HojaVida } from './HojaVida'
+import { OrdenesTrabajo } from '../mantenimiento/OrdenesTrabajo'
 import { listarSedes } from './sedesApi'
 import { listarDocumentos, type DocumentoEquipo } from './documentosApi'
 
@@ -84,7 +85,34 @@ export function EquiposPage() {
       celda: (e) =>
         `${e.sede_nombre || '—'}${e.servicio_nombre ? ` / ${e.servicio_nombre}` : ''}`,
     },
-    { header: 'Estado', celda: (e) => etiquetaEstado(e.estado) },
+    {
+      header: 'Estado',
+      celda: (e) => {
+        const colores: Record<string, { bg: string; text: string }> = {
+          operativo: { bg: '#d4edda', text: '#155724' },
+          en_mantenimiento: { bg: '#FFD700', text: '#000' },
+          fuera_de_servicio: { bg: '#f8d7da', text: '#721c24' },
+          dado_de_baja: { bg: '#e2e3e5', text: '#383d41' },
+        }
+        const color = colores[e.estado] || { bg: '#f0f0f0', text: '#333' }
+        return (
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '6px 10px',
+              borderRadius: '4px',
+              backgroundColor: color.bg,
+              color: color.text,
+              fontWeight: '700',
+              fontSize: '0.9rem',
+              border: `2px solid ${color.text}`,
+            }}
+          >
+            {etiquetaEstado(e.estado)}
+          </span>
+        )
+      },
+    },
     {
       header: '',
       ancho: 50,
@@ -194,6 +222,8 @@ function ResumenModal({
   const { puede } = useAuth()
   const puedeEditar = puede('inventario:editar')
   const [verDocs, setVerDocs] = useState(false)
+  const [verMovimientos, setVerMovimientos] = useState(false)
+  const [verMantenimiento, setVerMantenimiento] = useState(false)
   const [documentos, setDocumentos] = useState<DocumentoEquipo[]>([])
   const [cargandoDocs, setCargandoDocs] = useState(false)
   const [años, setAños] = useState<number[]>([])
@@ -224,10 +254,13 @@ function ResumenModal({
           </h3>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button className="btn-primary btn-ico" onClick={() => setVerDocs(true)}>
-              <Folder size={16} /> Documentos del equipo
+              <Folder size={16} /> Documentos
             </button>
             <button className="btn-primary btn-ico" onClick={onGenerarHoja}>
               <FileText size={16} /> Generar hoja de vida
+            </button>
+            <button className="btn-ghost" onClick={onCerrar} style={{ marginLeft: 'auto' }}>
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -265,6 +298,34 @@ function ResumenModal({
                     <span>{año}</span>
                   </button>
                 ))}
+              </div>
+
+              <h5 style={{ margin: '20px 0 8px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Movimientos
+              </h5>
+              <div className="rz-años">
+                <button
+                  className="año-folder"
+                  onClick={() => setVerMovimientos(true)}
+                  title="Historial de ubicaciones"
+                >
+                  <MapPin size={16} />
+                  <span>Historial de Ubicaciones</span>
+                </button>
+              </div>
+
+              <h5 style={{ margin: '20px 0 8px', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Mantenimiento
+              </h5>
+              <div className="rz-años">
+                <button
+                  className="año-folder"
+                  onClick={() => setVerMantenimiento(true)}
+                  title="Órdenes de trabajo"
+                >
+                  <Wrench size={16} />
+                  <span>Órdenes de Trabajo</span>
+                </button>
               </div>
             </div>
           </div>
@@ -343,8 +404,51 @@ function ResumenModal({
                 setAños(añosUnicos)
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {verMovimientos && (
+        <div className="modal-overlay" onClick={() => setVerMovimientos(false)}>
+          <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
+            <div className="detail-head">
+              <h3>
+                <MapPin size={20} /> Historial de Ubicaciones
+              </h3>
+              <button
+                className="btn-ghost"
+                onClick={() => setVerMovimientos(false)}
+                style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
             <HistorialMovimientos
               equipoId={e.id}
+              puedeEditar={puedeEditar}
+            />
+          </div>
+        </div>
+      )}
+
+      {verMantenimiento && (
+        <div className="modal-overlay" onClick={() => setVerMantenimiento(false)}>
+          <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
+            <div className="detail-head">
+              <h3>
+                <FileText size={20} /> Mantenimiento
+              </h3>
+              <button
+                className="btn-ghost"
+                onClick={() => setVerMantenimiento(false)}
+                style={{ padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <OrdenesTrabajo
+              equipoId={e.id}
+              equipoNombre={e.nombre}
               puedeEditar={puedeEditar}
             />
           </div>

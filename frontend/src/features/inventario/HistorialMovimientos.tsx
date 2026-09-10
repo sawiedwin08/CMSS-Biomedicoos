@@ -92,7 +92,7 @@ export function HistorialMovimientos({
     <div className="historial-section">
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
         <MapPin size={20} />
-        <h4 className="historial-titulo">Historial de Ubicaciones (RF-004)</h4>
+        <h4 className="historial-titulo">Historial de Ubicaciones</h4>
       </div>
 
       {error && <div className="alert-error">{error}</div>}

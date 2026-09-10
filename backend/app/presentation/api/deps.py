@@ -53,6 +53,12 @@ from app.infrastructure.repositories.documento_equipo_repository_sqlalchemy impo
 from app.infrastructure.repositories.movimiento_equipo_repository_sqlalchemy import (
     MovimientoEquipoRepositorySQLAlchemy,
 )
+from app.infrastructure.repositories.orden_trabajo_repository_sqlalchemy import (
+    OrdenTrabajoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.checklist_equipo_repository_sqlalchemy import (
+    ChecklistEquipoRepositorySQLAlchemy,
+)
 from app.infrastructure.services.security import BcryptPasswordHasher, JwtTokenService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
@@ -101,6 +107,14 @@ def get_movimiento_equipo_repository(db: DbSession) -> MovimientoEquipoRepositor
     return MovimientoEquipoRepositorySQLAlchemy(db)
 
 
+def get_orden_trabajo_repository(db: DbSession) -> OrdenTrabajoRepositorySQLAlchemy:
+    return OrdenTrabajoRepositorySQLAlchemy(db)
+
+
+def get_checklist_equipo_repository(db: DbSession) -> ChecklistEquipoRepositorySQLAlchemy:
+    return ChecklistEquipoRepositorySQLAlchemy(db)
+
+
 # --- Servicios de seguridad ---
 def get_password_hasher() -> PasswordHasher:
     return BcryptPasswordHasher()
@@ -120,6 +134,8 @@ EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
 ModuloRepo = Annotated[ModuloRepository, Depends(get_modulo_repository)]
 DocumentoEquipoRepo = Annotated[DocumentoEquipoRepositorySQLAlchemy, Depends(get_documento_equipo_repository)]
 MovimientoEquipoRepo = Annotated[MovimientoEquipoRepositorySQLAlchemy, Depends(get_movimiento_equipo_repository)]
+OrdenTrabajoRepo = Annotated[OrdenTrabajoRepositorySQLAlchemy, Depends(get_orden_trabajo_repository)]
+ChecklistEquipoRepo = Annotated[ChecklistEquipoRepositorySQLAlchemy, Depends(get_checklist_equipo_repository)]
 Hasher = Annotated[PasswordHasher, Depends(get_password_hasher)]
 Tokens = Annotated[TokenService, Depends(get_token_service)]
 

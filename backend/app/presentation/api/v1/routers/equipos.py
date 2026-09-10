@@ -151,10 +151,31 @@ def actualizar_equipo(
     sedes: SedeRepo,
     servicios: ServicioRepo,
     proveedores: ProveedorRepo,
+    movimientos: MovimientoEquipoRepo,
 ) -> EquipoRead:
+    # Obtener ubicación anterior
+    equipo_anterior = equipos.obtener_por_id(equipo_id)
+
+    # Actualizar equipo
     actualizado = ActualizarEquipo(equipos, sedes, servicios, proveedores).ejecutar(
         equipo_id, _dto(datos)
     )
+
+    # Si cambió la ubicación, registrar movimiento automáticamente (RF-004)
+    if equipo_anterior and (
+        equipo_anterior.sede_id != actualizado.sede_id
+        or equipo_anterior.servicio_id != actualizado.servicio_id
+    ):
+        movimientos.registrar_movimiento(
+            equipo_id=equipo_id,
+            sede_origen_id=equipo_anterior.sede_id,
+            servicio_origen_id=equipo_anterior.servicio_id,
+            sede_destino_id=actualizado.sede_id,
+            servicio_destino_id=actualizado.servicio_id,
+            motivo="Actualización de ubicación",
+            responsable=None,
+        )
+
     return EquipoRead.model_validate(actualizado)
 
 
