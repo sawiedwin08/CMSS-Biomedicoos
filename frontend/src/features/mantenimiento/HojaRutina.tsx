@@ -1,10 +1,17 @@
-import { X, Printer, Plus, Trash2, Save, Trash } from 'lucide-react'
+import { X, Printer, Plus, Trash2, Save, FileCheck } from 'lucide-react'
 import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useState } from 'react'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 import logo from '../../assets/logo-valle-atriz.png'
 import type { OTRead, ChecklistEquipoRead } from './mantenimientoApi'
-import { actualizarOrdenTrabajo } from './mantenimientoApi'
+import {
+  actualizarOrdenTrabajo,
+  cambiarEstadoOT,
+  guardarPdfHojaRutina,
+} from './mantenimientoApi'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
 
 interface HojaRutinaProps {
   ot: OTRead
@@ -22,6 +29,8 @@ interface HojaRutinaProps {
   checklist: ChecklistEquipoRead | null
   ejecucion: Record<number, string>
   onClose: () => void
+  /** Se llama tras guardar el PDF (para refrescar documentos del equipo). */
+  onGuardado?: () => void
 }
 
 interface Repuesto {
@@ -40,6 +49,7 @@ export function HojaRutina({
   checklist,
   ejecucion,
   onClose,
+  onGuardado,
 }: HojaRutinaProps) {
   const [falla, setFalla] = useState(ot.descripcion || '')
   const [diagnostico, setDiagnostico] = useState(ot.observaciones || '')
@@ -64,6 +74,7 @@ export function HojaRutina({
 
   const canvasIzqRef = useRef<HTMLCanvasElement>(null)
   const canvasDerRef = useRef<HTMLCanvasElement>(null)
+  const docRef = useRef<HTMLDivElement>(null)
 
   const formatearFecha = (fechaISO: string | null): string => {
     if (!fechaISO) return ''
@@ -78,53 +89,6 @@ export function HojaRutina({
   const ubicacion = [equipo.sede_nombre, equipo.servicio_nombre, equipo.piso]
     .filter(Boolean)
     .join(' / ')
-
-  // Parsear observaciones guardadas del checklist
-  const parseObservaciones = () => {
-    if (ot.observaciones && checklist?.pasos) {
-      const obsMap: Record<number, string> = {}
-      checklist.pasos.forEach((paso) => {
-        const patron = new RegExp(`${paso.descripcion}:\\s*([^\n]+)`)
-        const match = ot.observaciones?.match(patron)
-        if (match) {
-          obsMap[paso.id] = match[1].trim()
-        }
-      })
-      setObservaciones(obsMap)
-    }
-  }
-
-  const dibujarFirma = (e: React.MouseEvent, canvas: React.RefObject<HTMLCanvasElement>, esIzq: boolean) => {
-    const ctx = canvas.current?.getContext('2d')
-    if (!ctx || !canvas.current) return
-
-    const rect = canvas.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-
-    ctx.beginPath()
-    ctx.moveTo(x, y)
-
-    const handleMouseMove = (me: MouseEvent) => {
-      const mx = me.clientX - rect.left
-      const my = me.clientY - rect.top
-      ctx.lineTo(mx, my)
-      ctx.stroke()
-    }
-
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      const img = canvas.current?.toDataURL()
-      if (img) {
-        if (esIzq) setFirmaIzq({...firmaIzq, imagen: img})
-        else setFirmaDer({...firmaDer, imagen: img})
-      }
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }
 
   const cargarFirma = (e: React.ChangeEvent<HTMLInputElement>, esIzq: boolean) => {
     const file = e.target.files?.[0]
@@ -167,50 +131,103 @@ export function HojaRutina({
     setRepuestos(repuestos.map(r => r.id === id ? { ...r, [campo]: valor } : r))
   }
 
+  // Arma el payload de la OT a partir de los campos diligenciados.
+  const construirDatosOT = () => {
+    const repuestosString = repuestos
+      .map(r => [r.codigo, r.descripcion, r.cantidad, r.causa].filter(p => p && p.trim()).join('|'))
+      .filter(r => r)
+      .join('; ')
+
+    let obsCompletas = diagnostico || ''
+    const obsChecklist = Object.entries(observaciones)
+      .filter(([_, obs]) => obs && obs.trim())
+      .map(([pasoId, obs]) => {
+        const paso = checklist?.pasos.find(p => p.id === Number(pasoId))
+        return `${paso?.descripcion}: ${obs}`
+      })
+      .join('\n')
+
+    if (obsChecklist) {
+      obsCompletas = obsCompletas ? `${obsCompletas}\n\n${obsChecklist}` : obsChecklist
+    }
+
+    const datos: any = {
+      descripcion: falla || undefined,
+      observaciones: obsCompletas || undefined,
+    }
+    if (repuestos.length > 0) datos.repuestos = repuestosString
+    return datos
+  }
+
   const guardarDatos = async () => {
     setGuardando(true)
     setMensaje(null)
     try {
-      const repuestosString = repuestos
-        .map(r => {
-          const partes = [r.codigo, r.descripcion, r.cantidad, r.causa]
-            .filter(p => p && p.trim())
-          return partes.join('|')
-        })
-        .filter(r => r)
-        .join('; ')
-
-      // Construir observaciones con las notas del checklist
-      let obsCompletas = diagnostico || ''
-      const obsChecklist = Object.entries(observaciones)
-        .filter(([_, obs]) => obs && obs.trim())
-        .map(([pasoId, obs]) => {
-          const paso = checklist?.pasos.find(p => p.id === Number(pasoId))
-          return `${paso?.descripcion}: ${obs}`
-        })
-        .join('\n')
-
-      if (obsChecklist) {
-        obsCompletas = obsCompletas ? `${obsCompletas}\n\n${obsChecklist}` : `${obsChecklist}`
-      }
-
-      const datosActualizar: any = {
-        descripcion: falla || undefined,
-        observaciones: obsCompletas || undefined,
-      }
-
-      if (repuestos.length > 0) {
-        datosActualizar.repuestos = repuestosString
-      }
-
-      console.log('Datos a enviar:', datosActualizar)
-
-      await actualizarOrdenTrabajo(ot.id, datosActualizar)
-
-      setMensaje({ tipo: 'exito', texto: '✅ Datos guardados correctamente' })
+      await actualizarOrdenTrabajo(ot.id, construirDatosOT())
+      setMensaje({ tipo: 'exito', texto: '✅ Borrador guardado correctamente' })
       setTimeout(() => setMensaje(null), 3000)
     } catch (err) {
       setMensaje({ tipo: 'error', texto: '❌ Error al guardar los datos' })
+      console.error(err)
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  // Captura la hoja tal como se ve y la convierte en un PDF (A4, paginado si es largo).
+  const generarPdfBlob = async (): Promise<Blob> => {
+    const el = docRef.current
+    if (!el) throw new Error('No se encontró la hoja para generar el PDF.')
+    // Captura en "modo impresión": valores visibles, controles ocultos.
+    el.classList.add('hr-exportando')
+    let canvas: HTMLCanvasElement
+    try {
+      canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        windowWidth: el.scrollWidth,
+      })
+    } finally {
+      el.classList.remove('hr-exportando')
+    }
+    const imgData = canvas.toDataURL('image/jpeg', 0.92)
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+    const pageW = pdf.internal.pageSize.getWidth()
+    const pageH = pdf.internal.pageSize.getHeight()
+    const imgH = (canvas.height * pageW) / canvas.width
+    let heightLeft = imgH
+    let position = 0
+    pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH)
+    heightLeft -= pageH
+    while (heightLeft > 0) {
+      position -= pageH
+      pdf.addPage()
+      pdf.addImage(imgData, 'JPEG', 0, position, pageW, imgH)
+      heightLeft -= pageH
+    }
+    return pdf.output('blob')
+  }
+
+  // Firma y guardado final: persiste datos + genera PDF + lo sube a la carpeta de
+  // mantenimiento + marca la OT como completada.
+  const firmarYGuardar = async () => {
+    setGuardando(true)
+    setMensaje(null)
+    try {
+      await actualizarOrdenTrabajo(ot.id, construirDatosOT())
+      const blob = await generarPdfBlob()
+      await guardarPdfHojaRutina(ot.id, blob)
+      await cambiarEstadoOT(ot.id, 'completada')
+      // Avisar hacia arriba para refrescar los documentos del equipo al instante.
+      onGuardado?.()
+      setMensaje({
+        tipo: 'exito',
+        texto: '✅ Hoja firmada y guardada. PDF en la carpeta de mantenimiento del equipo.',
+      })
+      setTimeout(() => onClose(), 1800)
+    } catch (err) {
+      setMensaje({ tipo: 'error', texto: '❌ Error al firmar y guardar la hoja de rutina' })
       console.error(err)
     } finally {
       setGuardando(false)
@@ -221,12 +238,15 @@ export function HojaRutina({
     <div className="hr-overlay">
       <div className="hr-barra no-print" style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
         <button className="btn-primary btn-ico" onClick={guardarDatos} disabled={guardando}>
-          <Save size={16} /> {guardando ? 'Guardando...' : 'Guardar'}
+          <Save size={16} /> {guardando ? 'Guardando...' : 'Guardar borrador'}
+        </button>
+        <button className="btn-primary btn-ico" onClick={firmarYGuardar} disabled={guardando}>
+          <FileCheck size={16} /> {guardando ? 'Procesando...' : 'Firmar y guardar'}
         </button>
         <button className="btn-primary btn-ico" onClick={() => window.print()}>
-          <Printer size={16} /> Imprimir / Guardar como PDF
+          <Printer size={16} /> Imprimir
         </button>
-        <button className="btn-ghost" onClick={onClose}>
+        <button className="btn-primary btn-ico" onClick={onClose}>
           <X size={18} />
         </button>
         {mensaje && (
@@ -244,9 +264,9 @@ export function HojaRutina({
         )}
       </div>
 
-      <div className="hr-doc" onClick={(e) => e.stopPropagation()}>
-        {/* ========== PÁGINA 1: RUTINA DE MANTENIMIENTO ========== */}
-        <section className="hr-pagina">
+      <div className="hr-doc" ref={docRef} onClick={(e) => e.stopPropagation()}>
+        {/* ========== PÁGINA 1: RUTINA DE MANTENIMIENTO (Preventivo/Correctivo) ========== */}
+        {(ot.tipo === 'preventivo' || ot.tipo === 'correctivo') && <section className="hr-pagina">
           {/* ENCABEZADO */}
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '2px' }}>
             <colgroup>
@@ -365,9 +385,10 @@ export function HojaRutina({
             </tbody>
           </table>
 
-          {/* FIRMAS */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', marginBottom: '2px', fontSize: '9px' }}>
-            {/* FIRMA IZQUIERDA */}
+          {/* FIRMAS — preventivo: solo ENTREGA; correctivo: ambas */}
+          <div style={{ display: 'grid', gridTemplateColumns: ot.tipo === 'preventivo' ? '1fr' : '1fr 1fr', gap: '2px', marginBottom: '2px', fontSize: '9px' }}>
+            {/* FIRMA IZQUIERDA (no aplica en preventivo) */}
+            {ot.tipo !== 'preventivo' && (
             <div style={{ border: '1px solid #666', padding: '6px 5px', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={(e) => e.stopPropagation()}>
               <div style={{ fontWeight: 'bold', fontSize: '8px', backgroundColor: '#1e5a96', color: '#fff', padding: '3px 4px' }}>RECIBE A SATISFACCIÓN</div>
 
@@ -412,6 +433,7 @@ export function HojaRutina({
                 <div className="print-only" style={{ fontSize: '7px', minHeight: '12px', padding: '2px' }}>{firmaIzq.tarjeta}</div>
               </div>
             </div>
+            )}
 
             {/* FIRMA DERECHA */}
             <div style={{ border: '1px solid #666', padding: '6px 5px', display: 'flex', flexDirection: 'column', gap: '4px' }} onClick={(e) => e.stopPropagation()}>
@@ -460,11 +482,11 @@ export function HojaRutina({
             </div>
           </div>
 
-        </section>
+        </section>}
 
       {/* MODAL DE OBSERVACIONES */}
       {pasoObsModal && (
-        <div className="modal-overlay" onClick={() => setPasoObsModal(null)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setPasoObsModal(null))}>
           <div className="modal card" onClick={(e) => e.stopPropagation()}>
             <div className="detail-head">
               <h3>Observación: {pasoObsModal.desc}</h3>
@@ -496,8 +518,8 @@ export function HojaRutina({
         </div>
       )}
 
-      {/* ========== PÁGINA 2: REPORTE DE MANTENIMIENTO ========== */}
-        <section className="hr-pagina">
+      {/* ========== PÁGINA 2: REPORTE DE MANTENIMIENTO (Calibración/Otros) ========== */}
+      {(ot.tipo === 'calibracion' || ot.tipo === 'otra') && <section className="hr-pagina">
           {/* ENCABEZADO */}
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '2px' }}>
             <colgroup>
@@ -942,7 +964,7 @@ export function HojaRutina({
               </div>
             </div>
           </div>
-        </section>
+        </section>}
       </div>
     </div>,
     document.body

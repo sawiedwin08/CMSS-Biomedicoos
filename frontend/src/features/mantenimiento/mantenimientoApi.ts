@@ -31,6 +31,7 @@ export interface OTRead {
   id: number
   equipo_id: number
   equipo_nombre?: string
+  equipo_codigo?: string
   tipo: TipoMantenimiento
   estado: EstadoOT
   descripcion: string | null
@@ -98,6 +99,72 @@ export async function crearOrdenTrabajo(
   return data
 }
 
+export interface OTLoteResultado {
+  creadas: number
+  errores: { equipo_id: number; error: string }[]
+}
+
+export interface PasoPlantilla {
+  orden: number
+  descripcion: string
+  instrucciones?: string | null
+}
+
+export interface PlantillaRutina {
+  id: number
+  nombre: string
+  pasos: PasoPlantilla[]
+}
+
+export interface CambioEstadoLoteResultado {
+  actualizadas: number
+  omitidas: number
+}
+
+/** Cambia el estado de varias OT a la vez (las completadas se omiten). */
+export async function cambiarEstadoLote(
+  otIds: number[],
+  nuevoEstado: EstadoOT,
+): Promise<CambioEstadoLoteResultado> {
+  const { data } = await api.patch<CambioEstadoLoteResultado>(
+    '/mantenimiento/ordenes-trabajo/estado-lote',
+    { ot_ids: otIds, nuevo_estado: nuevoEstado },
+  )
+  return data
+}
+
+/** Lista las plantillas de rutina guardadas. */
+export async function listarPlantillasRutina(): Promise<PlantillaRutina[]> {
+  const { data } = await api.get<PlantillaRutina[]>('/mantenimiento/plantillas-rutina')
+  return data
+}
+
+/** Guarda una rutina como plantilla reutilizable. */
+export async function crearPlantillaRutina(
+  nombre: string,
+  pasos: PasoPlantilla[],
+): Promise<PlantillaRutina> {
+  const { data } = await api.post<PlantillaRutina>('/mantenimiento/plantillas-rutina', {
+    nombre,
+    pasos,
+  })
+  return data
+}
+
+/**
+ * Crear órdenes de trabajo en lote: una por cada equipo.
+ */
+export async function crearOrdenesLote(
+  equipoIds: number[],
+  datos: Partial<OTCreate>,
+): Promise<OTLoteResultado> {
+  const { data } = await api.post<OTLoteResultado>('/mantenimiento/ordenes-trabajo/lote', {
+    ...datos,
+    equipo_ids: equipoIds,
+  })
+  return data
+}
+
 /**
  * Obtener todas las órdenes de trabajo del sistema.
  */
@@ -161,6 +228,15 @@ export async function cambiarEstadoOT(
     { nuevo_estado: nuevoEstado }
   )
   return data
+}
+
+/**
+ * Guarda el PDF diligenciado de la hoja de rutina en la carpeta de mantenimiento del equipo.
+ */
+export async function guardarPdfHojaRutina(otId: number, pdf: Blob): Promise<void> {
+  const fd = new FormData()
+  fd.append('archivo', pdf, `OT-${otId}.pdf`)
+  await api.post(`/mantenimiento/ordenes-trabajo/${otId}/pdf`, fd)
 }
 
 /**

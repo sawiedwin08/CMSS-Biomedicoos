@@ -10,10 +10,11 @@ from app.infrastructure.db.types import pg_enum
 class EjecucionChecklistPaso(Base):
     """Registro de la ejecución de cada paso del checklist en una OT."""
     __tablename__ = "ejecucion_checklist_pasos"
+    __table_args__ = {"schema": "biomedicos"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    ot_id: Mapped[int] = mapped_column(ForeignKey("ordenes_trabajo.id"), index=True)
-    paso_id: Mapped[int] = mapped_column(ForeignKey("checklist_pasos.id"))
+    ot_id: Mapped[int] = mapped_column(ForeignKey("biomedicos.ordenes_trabajo.id"), index=True)
+    paso_id: Mapped[int] = mapped_column(ForeignKey("biomedicos.checklist_pasos.id"))
 
     estado: Mapped[EstadoChecklist] = mapped_column(
         pg_enum(EstadoChecklist, "estado_checklist"),

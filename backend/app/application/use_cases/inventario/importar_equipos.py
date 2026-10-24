@@ -159,6 +159,10 @@ class ImportarEquipos:
                 raise _ErrorFila(
                     f"El servicio '{v['servicio']}' no existe en la sede '{v['sede']}'."
                 )
+            if not match.activo:
+                raise _ErrorFila(
+                    f"El servicio '{v['servicio']}' está inactivo y no admite equipos."
+                )
             servicio_id = match.id
 
         # Resolver proveedor

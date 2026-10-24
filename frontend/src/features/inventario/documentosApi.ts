@@ -2,7 +2,6 @@
  * Cliente HTTP para gestionar documentos de equipos.
  * Endpoints: GET|POST|DELETE /equipos/{id}/documentos
  */
-import type { Equipo } from '../../entities/equipo'
 import { api } from '../../shared/api/client'
 
 export interface UsuarioEnDocumento {

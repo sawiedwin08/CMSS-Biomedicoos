@@ -23,6 +23,46 @@ class OTCreate(OTBase):
     pass
 
 
+class OTLoteCreate(OTBase):
+    """Creación de órdenes de trabajo en lote (una por equipo)."""
+    equipo_ids: list[int] = Field(min_length=1)
+
+
+class OTLoteResultado(BaseModel):
+    creadas: int
+    errores: list[dict] = Field(default_factory=list)
+
+
+class CambioEstadoLote(BaseModel):
+    ot_ids: list[int] = Field(min_length=1)
+    nuevo_estado: EstadoOT
+
+
+class CambioEstadoLoteResultado(BaseModel):
+    actualizadas: int
+    omitidas: int
+
+
+# ---- Plantillas de rutina (checklists reutilizables) ----
+class PasoPlantilla(BaseModel):
+    orden: int
+    descripcion: str = Field(min_length=1, max_length=500)
+    instrucciones: str | None = None
+
+
+class PlantillaRutinaCreate(BaseModel):
+    nombre: str = Field(min_length=1, max_length=200)
+    pasos: list[PasoPlantilla] = Field(min_length=1)
+
+
+class PlantillaRutinaRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    nombre: str
+    pasos: list[PasoPlantilla]
+
+
 class OTUpdate(OTBase):
     estado: EstadoOT | None = None
 
@@ -33,6 +73,7 @@ class OTRead(OTBase):
     id: int
     equipo_id: int
     equipo_nombre: str | None = None
+    equipo_codigo: str | None = None
     estado: EstadoOT
     fecha_inicio: datetime | None
     fecha_cierre: datetime | None

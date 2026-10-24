@@ -42,6 +42,14 @@ CATALOGO: list[tuple[str, str, str]] = [
     ("roles", "eliminar", "Eliminar roles"),
     ("modulos", "ver", "Ver módulos de la plataforma"),
     ("modulos", "asignar", "Asignar módulos de acceso a los roles"),
+    # Módulo Sistemas — Inventario de activos de TI
+    ("sistemas", "ver", "Ver el inventario de activos de TI"),
+    ("sistemas", "crear", "Registrar activos de TI"),
+    ("sistemas", "editar", "Editar / dar de baja activos de TI"),
+    ("sistemas", "eliminar", "Eliminar activos de TI"),
+    ("sistemas", "credenciales", "Ver las contraseñas de las cuentas de correo"),
+    ("mesa_ayuda", "ver", "Ver la bandeja de tickets de soporte"),
+    ("mesa_ayuda", "editar", "Gestionar tickets (asignar, responder, cambiar estado)"),
 ]
 
 # --- Roles de sistema: (nombre, descripción) ---
@@ -70,6 +78,27 @@ MODULOS_SISTEMA: list[tuple[str, str, str, str, int]] = [
         2,
     ),
     (
+        "contenidos",
+        "Gestión de Contenidos",
+        "Módulo en construcción.",
+        "📝",
+        3,
+    ),
+    (
+        "inventario_tecnologico",
+        "Sistemas",
+        "Módulo en construcción.",
+        "💻",
+        4,
+    ),
+    (
+        "gestion_humana",
+        "Gestión Humana",
+        "Módulo en construcción.",
+        "👥",
+        5,
+    ),
+    (
         "admin",
         "Administración",
         "Usuarios, roles y módulos de la plataforma.",
@@ -80,8 +109,22 @@ MODULOS_SISTEMA: list[tuple[str, str, str, str, int]] = [
 
 # --- Acceso por defecto a módulos según el rol ---
 MODULOS_POR_ROL: dict[str, set[str]] = {
-    "admin": {"biomedicos", "tardanzas", "admin"},
-    "coordinador": {"biomedicos", "tardanzas", "admin"},
+    "admin": {
+        "biomedicos",
+        "tardanzas",
+        "contenidos",
+        "inventario_tecnologico",
+        "gestion_humana",
+        "admin",
+    },
+    "coordinador": {
+        "biomedicos",
+        "tardanzas",
+        "contenidos",
+        "inventario_tecnologico",
+        "gestion_humana",
+        "admin",
+    },
     "ingeniero_biomedico": {"biomedicos", "tardanzas"},
     "tecnico": {"biomedicos", "tardanzas"},
     "consulta": {"biomedicos", "tardanzas"},

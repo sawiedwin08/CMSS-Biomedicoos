@@ -5,7 +5,8 @@ import type { Rol } from '../../entities/rol'
 import type { Usuario } from '../../entities/usuario'
 import { useAuth } from '../../shared/auth/AuthContext'
 import { titulo } from '../../shared/format'
-import { type Columna, DataTable } from '../../shared/ui/DataTable'
+import DataTable, { type Columna } from '../../shared/ui/DataTable'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
 import { listarRoles } from '../roles/rolesApi'
 import {
   actualizarUsuario,
@@ -76,41 +77,55 @@ export function UsuariosPage() {
 
   const columnas: Columna<Usuario>[] = [
     {
+      id: 'nombre',
       header: 'Nombre',
-      celda: (u) => (
-        <>
-          {u.es_protegido && (
-            <span
-              className="icono-inline"
-              title="Usuario protegido"
-              style={{ marginLeft: 4 }}
-            >
-              <Lock size={14} />
-            </span>
-          )}
-          {u.nombre}
-          {yo?.id === u.id && <span className="muted small"> (tú)</span>}
-        </>
-      ),
+      accessorFn: (u) => u.nombre,
+      cell: ({ row }) => {
+        const u = row.original
+        return (
+          <>
+            {u.es_protegido && (
+              <span
+                className="icono-inline"
+                title="Usuario protegido"
+                style={{ marginLeft: 4 }}
+              >
+                <Lock size={14} />
+              </span>
+            )}
+            {u.nombre}
+            {yo?.id === u.id && <span className="muted small"> (tú)</span>}
+          </>
+        )
+      },
     },
-    { header: 'Correo', celda: (u) => u.email },
+    { id: 'email', header: 'Correo', accessorFn: (u) => u.email },
     {
+      id: 'rol',
       header: 'Rol',
-      celda: (u) => <span className="badge">{titulo(u.rol_nombre)}</span>,
+      accessorFn: (u) => u.rol_nombre,
+      cell: ({ row }) => <span className="badge">{titulo(row.original.rol_nombre)}</span>,
     },
     {
+      id: 'estado',
       header: 'Estado',
-      celda: (u) => (
-        <span className={u.activo ? 'estado-ok' : 'estado-off'}>
-          {u.activo ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      accessorFn: (u) => u.activo,
+      cell: ({ row }) => {
+        const u = row.original
+        return (
+          <span className={u.activo ? 'estado-ok' : 'estado-off'}>
+            {u.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        )
+      },
     },
     {
+      id: 'acciones',
       header: '',
-      ancho: 60,
-      celda: (u) =>
-        editable(u) && hayRoles ? (
+      enableSorting: false,
+      cell: ({ row }) => {
+        const u = row.original
+        return editable(u) && hayRoles ? (
           <button
             className="icon-btn"
             title="Editar usuario"
@@ -126,7 +141,8 @@ export function UsuariosPage() {
           <span className="muted icono-inline" title="Protegido: no editable">
             <Lock size={16} />
           </span>
-        ) : null,
+        ) : null
+      },
     },
   ]
 
@@ -150,17 +166,10 @@ export function UsuariosPage() {
         ))}
 
       <div className="card">
-        <h2>Usuarios</h2>
         {mensaje && <div className="alert-ok">{mensaje}</div>}
         {error && <div className="alert-error">{error}</div>}
 
-        <DataTable
-          columnas={columnas}
-          filas={usuarios}
-          keyOf={(u) => u.id}
-          porPagina={15}
-          vacio="No hay usuarios."
-        />
+        <DataTable columns={columnas} data={usuarios} title="Usuarios" initialPageSize={15} />
 
         {puedeEditar && !hayRoles && (
           <p className="muted small" style={{ marginTop: 12 }}>
@@ -250,7 +259,7 @@ function EditarUsuarioModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(onCerrar)}>
       <form
         className="modal card"
         onClick={(e) => e.stopPropagation()}

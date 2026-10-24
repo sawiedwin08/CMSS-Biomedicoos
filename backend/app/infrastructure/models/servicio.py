@@ -8,10 +8,11 @@ from app.infrastructure.models.mixins import TimestampMixin
 
 class Servicio(Base, TimestampMixin):
     __tablename__ = "servicios"
+    __table_args__ = {"schema": "comun"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nombre: Mapped[str] = mapped_column(String(150), index=True)
-    sede_id: Mapped[int] = mapped_column(ForeignKey("sedes.id"), index=True)
+    sede_id: Mapped[int] = mapped_column(ForeignKey("comun.sedes.id"), index=True)
     activo: Mapped[bool] = mapped_column(default=True)
 
     sede: Mapped["Sede"] = relationship(back_populates="servicios")  # noqa: F821

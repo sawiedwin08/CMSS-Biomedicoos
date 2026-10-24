@@ -13,17 +13,21 @@ import {
   PLANOS_OPCIONES,
   PROPIEDADES,
   RIESGOS,
+  semaforoVencimiento,
   TECNOLOGIAS,
 } from '../../entities/equipo'
 import type { Proveedor } from '../../entities/proveedor'
 import type { Sede } from '../../entities/sede'
 import type { Servicio } from '../../entities/servicio'
 import { useAuth } from '../../shared/auth/AuthContext'
-import { type Columna, DataTable } from '../../shared/ui/DataTable'
+import DataTable, { type Columna } from '../../shared/ui/DataTable'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
 import { MultiSelect } from '../../shared/ui/MultiSelect'
 import {
   actualizarEquipo,
   crearEquipo,
+  verificarSerial,
+  verificarNumeroActivo,
   type DatosEquipo,
   descargarPlantilla,
   eliminarEquipo,
@@ -119,56 +123,131 @@ export function InventarioPage() {
   if (cargando) return <div className="muted">Cargando inventario…</div>
 
   const columnas: Columna<Equipo>[] = [
-    { header: 'Cod', celda: (e) => e.codigo_interno },
-    { header: 'Nombre', celda: (e) => e.nombre },
-    { header: 'Marca', celda: (e) => e.marca || '—' },
-    { header: 'Modelo', celda: (e) => e.modelo || '—' },
-    { header: 'Serial', celda: (e) => e.serial_fabricante },
-    { header: 'N° activo', celda: (e) => e.numero_activo || '—' },
     {
-      header: 'Ubicación',
-      celda: (e) => (
-        <div className="celda-ubic">
-          <span>{e.sede_nombre || '—'}</span>
-          {(e.servicio_nombre || e.piso) && (
-            <span className="muted small">
-              {e.servicio_nombre || '—'}
-              {e.piso ? ` · Piso ${e.piso}` : ''}
-            </span>
-          )}
-        </div>
-      ),
+      id: 'codigo_interno',
+      header: 'Cod',
+      accessorFn: (e) => e.codigo_interno,
+      size: 90,
+      meta: { align: 'center', mono: true },
     },
-    { header: 'Clase biomédica', celda: (e) => e.clase_biomedica || '—' },
-    { header: 'Riesgo', celda: (e) => e.clasificacion_riesgo || '—' },
-    { header: 'INVIMA', celda: (e) => e.registro_invima || '—' },
-    { header: 'Venc. INVIMA', celda: (e) => e.fecha_vencimiento_invima || '—' },
-    { header: 'Propiedad', celda: (e) => etiquetaPropiedad(e.propiedad) },
     {
+      id: 'nombre',
+      header: 'Nombre',
+      accessorFn: (e) => e.nombre,
+      size: 240,
+      meta: { truncate: true },
+    },
+    {
+      id: 'marca',
+      header: 'Marca',
+      accessorFn: (e) => e.marca || '—',
+      size: 130,
+      meta: { truncate: true },
+    },
+    {
+      id: 'modelo',
+      header: 'Modelo',
+      accessorFn: (e) => e.modelo || '—',
+      size: 130,
+      meta: { truncate: true },
+    },
+    {
+      id: 'serial',
+      header: 'Serial',
+      accessorFn: (e) => e.serial_fabricante,
+      size: 150,
+      meta: { mono: true, truncate: true },
+    },
+    {
+      id: 'numero_activo',
+      header: 'N° activo',
+      accessorFn: (e) => e.numero_activo || '—',
+      size: 110,
+      meta: { align: 'center', mono: true },
+    },
+    {
+      id: 'clase_biomedica',
+      header: 'Clase biomédica',
+      accessorFn: (e) => e.clase_biomedica || '—',
+      size: 160,
+      meta: { truncate: true },
+    },
+    {
+      id: 'riesgo',
+      header: 'Riesgo',
+      accessorFn: (e) => e.clasificacion_riesgo || '—',
+      size: 80,
+      meta: { align: 'center' },
+    },
+    {
+      id: 'invima',
+      header: 'INVIMA',
+      accessorFn: (e) => e.registro_invima || '—',
+      size: 140,
+      meta: { mono: true, truncate: true },
+    },
+    {
+      id: 'venc_invima',
+      header: 'Venc. INVIMA',
+      accessorFn: (e) => e.fecha_vencimiento_invima || '—',
+      size: 120,
+      meta: { align: 'center', mono: true },
+      cell: ({ row }) => {
+        const fecha = row.original.fecha_vencimiento_invima
+        if (!fecha) return '—'
+        const s = semaforoVencimiento(fecha)
+        if (!s) return fecha
+        const titulo =
+          s.dias < 0
+            ? `Vencido hace ${Math.abs(s.dias)} día(s)`
+            : s.dias === 0
+              ? 'Vence hoy'
+              : `Vence en ${s.dias} día(s)`
+        return (
+          <span className={`invima-venc invima-${s.estado}`} title={titulo}>
+            {fecha}
+          </span>
+        )
+      },
+    },
+    {
+      id: 'propiedad',
+      header: 'Propiedad',
+      accessorFn: (e) => etiquetaPropiedad(e.propiedad),
+      size: 110,
+      meta: { align: 'center' },
+    },
+    {
+      id: 'acciones',
       header: '',
-      ancho: 90,
-      celda: (e) => (
-        <>
-          {puedeEditar && (
-            <button
-              className="icon-btn"
-              title="Editar"
-              onClick={() => {
-                setError(null)
-                setMensaje(null)
-                setEditando(e)
-              }}
-            >
-              <Pencil size={16} />
-            </button>
-          )}
-          {puedeEliminar && (
-            <button className="icon-btn" title="Eliminar" onClick={() => borrar(e)}>
-              <Trash2 size={16} />
-            </button>
-          )}
-        </>
-      ),
+      enableSorting: false,
+      size: 90,
+      meta: { align: 'right', stickyRight: true },
+      cell: ({ row }) => {
+        const e = row.original
+        return (
+          <>
+            {puedeEditar && (
+              <button
+                className="icon-btn"
+                title="Editar"
+                onClick={() => {
+                  setError(null)
+                  setMensaje(null)
+                  setEditando(e)
+                }}
+              >
+                <Pencil size={16} />
+              </button>
+            )}
+            {puedeEliminar && (
+              <button className="icon-btn" title="Eliminar" onClick={() => borrar(e)}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </>
+        )
+      },
     },
   ]
 
@@ -260,17 +339,16 @@ export function InventarioPage() {
         )}
 
         <DataTable
-          className="tabla-compacta"
-          columnas={columnas}
-          filas={equipos}
-          keyOf={(e) => e.id}
-          porPagina={50}
-          vacio="No hay equipos que coincidan."
+          columns={columnas}
+          data={equipos}
+          enableSearch={false}
+          initialPageSize={50}
+          initialDense
         />
       </div>
 
       {editando && (
-        <div className="modal-overlay" onClick={() => setEditando(null)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setEditando(null))}>
           <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
             <EquipoForm
               inicial={editando === 'nuevo' ? undefined : editando}
@@ -335,7 +413,7 @@ function ImportarModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(onCerrar)}>
       <div className="modal card" onClick={(e) => e.stopPropagation()}>
         <h3>Importar equipos desde Excel</h3>
         <p className="muted small">
@@ -468,6 +546,7 @@ function estadoInicial(inicial?: Equipo): DatosEquipo {
     registro_invima: inicial?.registro_invima ?? null,
     fecha_vencimiento_invima: inicial?.fecha_vencimiento_invima ?? null,
     periodicidad_mantenimiento: inicial?.periodicidad_mantenimiento ?? null,
+    fecha_ultimo_mantenimiento: inicial?.fecha_ultimo_mantenimiento ?? null,
     calibracion_si: inicial?.calibracion_si ?? false,
     calibracion_no: inicial?.calibracion_no ?? false,
     equipo_movil: inicial?.equipo_movil ?? false,
@@ -529,6 +608,8 @@ function EquipoForm({
 }) {
   const [f, setF] = useState<DatosEquipo>(() => estadoInicial(inicial))
   const [guardando, setGuardando] = useState(false)
+  const [errorSerial, setErrorSerial] = useState<string | null>(null)
+  const [errorNumeroActivo, setErrorNumeroActivo] = useState<string | null>(null)
   const [fotoFile, setFotoFile] = useState<File | null>(null)
   const [fotoPreview, setFotoPreview] = useState<string | null>(null)
   const [fotoQuitar, setFotoQuitar] = useState(false)
@@ -558,24 +639,79 @@ function EquipoForm({
     setF((prev) => ({ ...prev, [campo]: valor }))
   }
 
-  const serviciosDeSede = servicios.filter((s) => s.sede_id === f.sede_id)
+  // Valida el serial contra la base al salir del campo (feedback inmediato).
+  async function validarSerialEnVivo() {
+    const serial = f.serial_fabricante.trim()
+    if (!serial) {
+      setErrorSerial(null)
+      return
+    }
+    // Al editar, si el serial no cambió respecto al original, no hay nada que validar.
+    if (inicial && serial === inicial.serial_fabricante) {
+      setErrorSerial(null)
+      return
+    }
+    try {
+      const existe = await verificarSerial(serial, inicial?.id)
+      setErrorSerial(existe ? 'Este serial ya existe.' : null)
+    } catch {
+      // Silencioso: la validación definitiva ocurre al guardar.
+    }
+  }
+
+  // Valida el N° de activo (placa) contra la base al salir del campo.
+  async function validarNumeroActivoEnVivo() {
+    const numero = (f.numero_activo ?? '').trim()
+    if (!numero) {
+      setErrorNumeroActivo(null)
+      return
+    }
+    if (inicial && numero === (inicial.numero_activo ?? '')) {
+      setErrorNumeroActivo(null)
+      return
+    }
+    try {
+      const existe = await verificarNumeroActivo(numero, inicial?.id)
+      setErrorNumeroActivo(existe ? 'Este N° de activo ya existe.' : null)
+    } catch {
+      // Silencioso: la validación definitiva ocurre al guardar.
+    }
+  }
+
+  // Solo servicios activos; se conserva el ya seleccionado aunque esté inactivo
+  // (para no romper la edición de equipos asignados antes de desactivar el servicio).
+  const serviciosDeSede = servicios.filter(
+    (s) => s.sede_id === f.sede_id && (s.activo || s.id === f.servicio_id),
+  )
   const txt = (v: string | null) => v ?? ''
 
   // Campo de texto enlazado a una clave string|null del formulario.
   // Se llama como función (no como <Componente/>) para no remontar el input.
-  const campoTexto = (campo: keyof DatosEquipo, label: string) => (
-    <label className="field" key={campo}>
-      <span>{label}</span>
-      <input
-        value={txt(f[campo] as string | null)}
-        onChange={(e) => set(campo, (e.target.value || null) as never)}
-      />
-    </label>
-  )
+  // Detecta por el nombre: 'telefono*' acepta solo números; 'correo*' valida email.
+  const campoTexto = (campo: keyof DatosEquipo, label: string) => {
+    const esTelefono = String(campo).includes('telefono')
+    const esCorreo = String(campo).includes('correo')
+    return (
+      <label className="field" key={campo}>
+        <span>{label}</span>
+        <input
+          type={esCorreo ? 'email' : 'text'}
+          inputMode={esTelefono ? 'numeric' : undefined}
+          value={txt(f[campo] as string | null)}
+          onChange={(e) => {
+            const v = esTelefono ? e.target.value.replace(/\D/g, '') : e.target.value
+            set(campo, (v || null) as never)
+          }}
+        />
+      </label>
+    )
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setGuardando(true)
+    setErrorSerial(null)
+    setErrorNumeroActivo(null)
     try {
       const guardado = await onGuardar({
         ...f,
@@ -594,7 +730,15 @@ function EquipoForm({
       }
       await onFinalizado(inicial ? 'Equipo actualizado.' : 'Equipo registrado.')
     } catch (err) {
-      onError(detalleError(err, 'No se pudo guardar el equipo.'))
+      const detalle = detalleError(err, 'No se pudo guardar el equipo.')
+      // Errores de duplicado → se muestran en rojo junto al campo correspondiente.
+      if (/serial/i.test(detalle)) {
+        setErrorSerial(detalle)
+      } else if (/activo/i.test(detalle)) {
+        setErrorNumeroActivo(detalle)
+      } else {
+        onError(detalle)
+      }
     } finally {
       setGuardando(false)
     }
@@ -618,10 +762,17 @@ function EquipoForm({
         <label className="field">
           <span>Serial del fabricante *</span>
           <input
+            className={errorSerial ? 'input-error' : undefined}
+            aria-invalid={errorSerial ? true : undefined}
             value={f.serial_fabricante}
-            onChange={(e) => set('serial_fabricante', e.target.value)}
+            onChange={(e) => {
+              set('serial_fabricante', e.target.value)
+              if (errorSerial) setErrorSerial(null)
+            }}
+            onBlur={validarSerialEnVivo}
             required
           />
+          {errorSerial && <span className="field-error">{errorSerial}</span>}
         </label>
         <label className="field">
           <span>Nombre *</span>
@@ -634,7 +785,20 @@ function EquipoForm({
         </label>
         {campoTexto('marca', 'Marca')}
         {campoTexto('modelo', 'Modelo')}
-        {campoTexto('numero_activo', 'N° de activo (placa)')}
+        <label className="field">
+          <span>N° de activo (placa)</span>
+          <input
+            className={errorNumeroActivo ? 'input-error' : undefined}
+            aria-invalid={errorNumeroActivo ? true : undefined}
+            value={txt(f.numero_activo)}
+            onChange={(e) => {
+              set('numero_activo', (e.target.value || null) as never)
+              if (errorNumeroActivo) setErrorNumeroActivo(null)
+            }}
+            onBlur={validarNumeroActivoEnVivo}
+          />
+          {errorNumeroActivo && <span className="field-error">{errorNumeroActivo}</span>}
+        </label>
         <label className="field">
           <span>Estado</span>
           <select value={f.estado} onChange={(e) => set('estado', e.target.value as never)}>
@@ -701,6 +865,7 @@ function EquipoForm({
             {serviciosDeSede.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre}
+                {s.activo ? '' : ' (inactivo)'}
               </option>
             ))}
           </select>
@@ -948,7 +1113,39 @@ function EquipoForm({
 
       <h4 className="grupo-tit">Mantenimiento y operación</h4>
       <div className="form-grid">
-        {campoTexto('periodicidad_mantenimiento', 'Periodicidad de mantenimiento')}
+        <label className="field">
+          <span>Periodicidad de mantenimiento</span>
+          <select
+            value={f.periodicidad_mantenimiento ?? ''}
+            onChange={(e) => set('periodicidad_mantenimiento', e.target.value || null)}
+          >
+            <option value="">Selecciona…</option>
+            <option value="semestral">Semestral</option>
+            <option value="trimestral">Trimestral</option>
+            <option value="anual">Anual</option>
+            <option value="no_aplica">No aplica</option>
+            {f.periodicidad_mantenimiento &&
+              !['semestral', 'trimestral', 'anual', 'no_aplica'].includes(
+                f.periodicidad_mantenimiento,
+              ) && (
+                <option value={f.periodicidad_mantenimiento}>
+                  {f.periodicidad_mantenimiento} (valor anterior)
+                </option>
+              )}
+          </select>
+        </label>
+        <label className="field">
+          <span>Último mantenimiento realizado</span>
+          <input
+            type="date"
+            value={f.fecha_ultimo_mantenimiento ?? ''}
+            onChange={(e) => set('fecha_ultimo_mantenimiento', e.target.value || null)}
+          />
+          <span className="muted small">
+            Opcional. Si lo dejas vacío, se usa la fecha de la última orden de trabajo
+            completada.
+          </span>
+        </label>
       </div>
       <div className="form-grid">
         <label className="field-check">

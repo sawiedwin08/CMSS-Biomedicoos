@@ -1,4 +1,6 @@
 """Router de gestión de equipos — núcleo del Inventario (RF-001..007)."""
+import shutil
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -89,6 +91,36 @@ def descargar_plantilla() -> Response:
             "Content-Disposition": "attachment; filename=plantilla_equipos.xlsx"
         },
     )
+
+
+@router.get(
+    "/existe-serial",
+    summary="Verifica si un serial de fabricante ya está registrado",
+    dependencies=[Depends(require_permiso("inventario:ver"))],
+)
+def existe_serial(
+    equipos: EquipoRepo,
+    serial: Annotated[str, Query(description="Serial del fabricante a verificar")],
+    excluir_id: Annotated[int | None, Query(description="Equipo a excluir (al editar)")] = None,
+) -> dict[str, bool]:
+    limpio = serial.strip()
+    existe = bool(limpio) and equipos.existe_serial(limpio, excluir_id=excluir_id)
+    return {"existe": existe}
+
+
+@router.get(
+    "/existe-numero-activo",
+    summary="Verifica si un N° de activo (placa) ya está registrado",
+    dependencies=[Depends(require_permiso("inventario:ver"))],
+)
+def existe_numero_activo(
+    equipos: EquipoRepo,
+    numero: Annotated[str, Query(description="N° de activo (placa) a verificar")],
+    excluir_id: Annotated[int | None, Query(description="Equipo a excluir (al editar)")] = None,
+) -> dict[str, bool]:
+    limpio = numero.strip()
+    existe = bool(limpio) and equipos.existe_numero_activo(limpio, excluir_id=excluir_id)
+    return {"existe": existe}
 
 
 @router.post(
@@ -187,6 +219,9 @@ def actualizar_equipo(
 )
 def eliminar_equipo(equipo_id: int, equipos: EquipoRepo) -> None:
     EliminarEquipo(equipos).ejecutar(equipo_id)
+    # Elimina también la carpeta física de documentos del equipo (evita carpetas huérfanas).
+    carpeta = Path(settings.STORAGE_DIR) / "documentos" / f"equipo_{equipo_id}"
+    shutil.rmtree(carpeta, ignore_errors=True)
 
 
 _IMAGENES_OK = {"image/jpeg", "image/png", "image/webp"}
@@ -245,7 +280,6 @@ def eliminar_foto(equipo_id: int, equipos: EquipoRepo) -> None:
 
 # ==================== DOCUMENTOS DEL EQUIPO ====================
 
-from pathlib import Path
 import os
 import zipfile
 import io

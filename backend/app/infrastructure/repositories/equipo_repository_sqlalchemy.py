@@ -1,11 +1,15 @@
 """Implementación SQLAlchemy del puerto EquipoRepository (RF-001..007)."""
-from sqlalchemy import or_, select, text
+from datetime import date
+
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.application.dto.equipos import FiltroEquipos
 from app.domain.entities.equipo import Equipo
+from app.domain.enums.estado_ot import EstadoOT
 from app.domain.exceptions import RecursoNoEncontrado
 from app.infrastructure.models.equipo import Equipo as EquipoModel
+from app.infrastructure.models.orden_trabajo import OrdenTrabajo
 
 # Campos que se copian igual entre entidad y modelo (sin transformación).
 _CAMPOS = (
@@ -21,8 +25,8 @@ _CAMPOS = (
     "modo_adquisicion", "propiedad", "proveedor_id", "fecha_adquisicion", "costo_adquisicion",
     "orden_compra", "fecha_inicial_garantia", "fecha_final_garantia", "fecha_instalacion",
     "fecha_funcionamiento", "registro_invima", "fecha_vencimiento_invima",
-    "periodicidad_mantenimiento", "calibracion_si", "calibracion_no", "equipo_movil",
-    "equipo_fijo", "accesorios", "descripcion_funcional",
+    "periodicidad_mantenimiento", "fecha_ultimo_mantenimiento", "calibracion_si",
+    "calibracion_no", "equipo_movil", "equipo_fijo", "accesorios", "descripcion_funcional",
 )
 # Campos de tipo lista que deben normalizarse a [] cuando la BD devuelve NULL.
 _LISTAS = ("fuentes_alimentacion", "manuales", "planos", "recomendaciones_fabricante")
@@ -50,6 +54,28 @@ class EquipoRepositorySQLAlchemy:
     def _campos(e: Equipo) -> dict:
         return {campo: getattr(e, campo) for campo in _CAMPOS}
 
+    def _ultimo_mant_por_ot(self, equipo_ids: list[int]) -> dict[int, date]:
+        """Fecha de cierre de la OT completada más reciente, por equipo."""
+        if not equipo_ids:
+            return {}
+        filas = self._session.execute(
+            select(OrdenTrabajo.equipo_id, func.max(OrdenTrabajo.fecha_cierre))
+            .where(
+                OrdenTrabajo.estado == EstadoOT.COMPLETADA,
+                OrdenTrabajo.equipo_id.in_(equipo_ids),
+            )
+            .group_by(OrdenTrabajo.equipo_id)
+        ).all()
+        return {eid: dt.date() for eid, dt in filas if dt is not None}
+
+    def _aplicar_ultimo_mant(self, equipos: list[Equipo]) -> None:
+        """Rellena ultimo_mantenimiento_efectivo: manual si existe, si no la última OT."""
+        por_ot = self._ultimo_mant_por_ot([e.id for e in equipos if e.id is not None])
+        for e in equipos:
+            e.ultimo_mantenimiento_efectivo = (
+                e.fecha_ultimo_mantenimiento or por_ot.get(e.id)
+            )
+
     def listar(self, filtro: FiltroEquipos) -> list[Equipo]:
         stmt = select(EquipoModel)
         if filtro.texto:
@@ -74,14 +100,32 @@ class EquipoRepositorySQLAlchemy:
         if filtro.clasificacion_riesgo is not None:
             stmt = stmt.where(EquipoModel.clasificacion_riesgo == filtro.clasificacion_riesgo)
         stmt = stmt.order_by(EquipoModel.codigo_interno)
-        return [self._a_entidad(m) for m in self._session.scalars(stmt)]
+        equipos = [self._a_entidad(m) for m in self._session.scalars(stmt)]
+        self._aplicar_ultimo_mant(equipos)
+        return equipos
 
     def obtener_por_id(self, equipo_id: int) -> Equipo | None:
         model = self._session.get(EquipoModel, equipo_id)
-        return self._a_entidad(model) if model else None
+        if model is None:
+            return None
+        entidad = self._a_entidad(model)
+        self._aplicar_ultimo_mant([entidad])
+        return entidad
 
     def existe_codigo(self, codigo: str, excluir_id: int | None = None) -> bool:
         stmt = select(EquipoModel.id).where(EquipoModel.codigo_interno == codigo)
+        if excluir_id is not None:
+            stmt = stmt.where(EquipoModel.id != excluir_id)
+        return self._session.scalar(stmt) is not None
+
+    def existe_serial(self, serial: str, excluir_id: int | None = None) -> bool:
+        stmt = select(EquipoModel.id).where(EquipoModel.serial_fabricante == serial)
+        if excluir_id is not None:
+            stmt = stmt.where(EquipoModel.id != excluir_id)
+        return self._session.scalar(stmt) is not None
+
+    def existe_numero_activo(self, numero: str, excluir_id: int | None = None) -> bool:
+        stmt = select(EquipoModel.id).where(EquipoModel.numero_activo == numero)
         if excluir_id is not None:
             stmt = stmt.where(EquipoModel.id != excluir_id)
         return self._session.scalar(stmt) is not None
@@ -94,7 +138,7 @@ class EquipoRepositorySQLAlchemy:
         """
         for _ in range(1000):  # tope de seguridad ante huecos
             numero = self._session.execute(
-                text("SELECT nextval('equipo_codigo_seq')")
+                text("SELECT nextval('biomedicos.equipo_codigo_seq')")
             ).scalar_one()
             codigo = f"EQ-{numero:04d}"
             if not self.existe_codigo(codigo):

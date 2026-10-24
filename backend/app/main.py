@@ -9,12 +9,18 @@ from app.presentation.api.v1.routers import (
     auth,
     equipos,
     mantenimiento,
+    mesa_ayuda,
     modulos,
     permisos,
     proveedores,
     roles,
     sedes,
     servicios,
+    sistemas,
+    sistemas_cuentas,
+    sistemas_inicio,
+    sistemas_red,
+    soporte,
     usuarios,
 )
 
@@ -53,6 +59,12 @@ def crear_app() -> FastAPI:
     app.include_router(equipos.router, prefix=settings.API_V1_PREFIX)
     app.include_router(mantenimiento.router, prefix=settings.API_V1_PREFIX)
     app.include_router(modulos.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(sistemas.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(sistemas_red.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(sistemas_cuentas.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(mesa_ayuda.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(soporte.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(sistemas_inicio.router, prefix=settings.API_V1_PREFIX)
 
 
     @app.get("/", include_in_schema=False)

@@ -10,12 +10,13 @@ class DocumentoEquipo(Base, TimestampMixin):
     """Almacena metadatos de documentos subidos para cada equipo."""
 
     __tablename__ = "documento_equipos"
+    __table_args__ = {"schema": "biomedicos"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # Referencias
     equipo_id: Mapped[int] = mapped_column(
-        ForeignKey("equipos.id", ondelete="CASCADE"), index=True
+        ForeignKey("biomedicos.equipos.id", ondelete="CASCADE"), index=True
     )
     usuario_id: Mapped[int] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True, index=True

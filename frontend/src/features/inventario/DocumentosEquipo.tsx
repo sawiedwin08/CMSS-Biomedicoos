@@ -15,7 +15,6 @@ import {
   descargarTodosDocumentos,
   eliminarDocumento,
   listarDocumentos,
-  obtenerIconoTipo,
   subirDocumento,
 } from './documentosApi'
 

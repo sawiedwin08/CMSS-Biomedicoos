@@ -36,7 +36,7 @@ class _ValidadorReferencias:
         self._servicios = servicios
         self._proveedores = proveedores
 
-    def validar(self, datos: DatosEquipo) -> None:
+    def validar(self, datos: DatosEquipo, servicio_id_actual: int | None = None) -> None:
         if datos.sede_id is not None and self._sedes.obtener_por_id(datos.sede_id) is None:
             raise RecursoNoEncontrado(f"La sede {datos.sede_id} no existe.")
 
@@ -51,6 +51,12 @@ class _ValidadorReferencias:
             if servicio.sede_id != datos.sede_id:
                 raise OperacionNoPermitida(
                     "El servicio no pertenece a la sede indicada."
+                )
+            # No se puede asignar a un servicio inactivo, salvo que el equipo ya
+            # estuviera en ese mismo servicio antes de desactivarlo (se respeta).
+            if not servicio.activo and datos.servicio_id != servicio_id_actual:
+                raise OperacionNoPermitida(
+                    "No se puede asignar un equipo a un servicio inactivo."
                 )
 
         if (
@@ -91,6 +97,14 @@ class CrearEquipo:
         self._validador = _ValidadorReferencias(sedes, servicios, proveedores)
 
     def ejecutar(self, datos: DatosEquipo) -> Equipo:
+        serial = (datos.serial_fabricante or "").strip()
+        if serial and self._equipos.existe_serial(serial):
+            raise NombreDuplicado(f"Ya existe un equipo con el serial '{serial}'.")
+        numero_activo = (datos.numero_activo or "").strip()
+        if numero_activo and self._equipos.existe_numero_activo(numero_activo):
+            raise NombreDuplicado(
+                f"Ya existe un equipo con el N° de activo '{numero_activo}'."
+            )
         codigo = (datos.codigo_interno or "").strip()
         if codigo:
             # Código manual: debe ser único.
@@ -117,12 +131,23 @@ class ActualizarEquipo:
         self._validador = _ValidadorReferencias(sedes, servicios, proveedores)
 
     def ejecutar(self, equipo_id: int, datos: DatosEquipo) -> Equipo:
-        if self._equipos.obtener_por_id(equipo_id) is None:
+        existente = self._equipos.obtener_por_id(equipo_id)
+        if existente is None:
             raise RecursoNoEncontrado(f"El equipo {equipo_id} no existe.")
+        serial = (datos.serial_fabricante or "").strip()
+        if serial and self._equipos.existe_serial(serial, excluir_id=equipo_id):
+            raise NombreDuplicado(f"Ya existe un equipo con el serial '{serial}'.")
+        numero_activo = (datos.numero_activo or "").strip()
+        if numero_activo and self._equipos.existe_numero_activo(
+            numero_activo, excluir_id=equipo_id
+        ):
+            raise NombreDuplicado(
+                f"Ya existe un equipo con el N° de activo '{numero_activo}'."
+            )
         codigo = (datos.codigo_interno or "").strip()
         if self._equipos.existe_codigo(codigo, excluir_id=equipo_id):
             raise NombreDuplicado(f"Ya existe un equipo con el código '{codigo}'.")
-        self._validador.validar(datos)
+        self._validador.validar(datos, servicio_id_actual=existente.servicio_id)
         return self._equipos.actualizar(equipo_id, _a_entidad(datos))
 
 

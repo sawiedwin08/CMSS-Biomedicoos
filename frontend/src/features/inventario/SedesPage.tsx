@@ -3,7 +3,8 @@ import { type FormEvent, useEffect, useState } from 'react'
 
 import type { Sede } from '../../entities/sede'
 import { useAuth } from '../../shared/auth/AuthContext'
-import { type Columna, DataTable } from '../../shared/ui/DataTable'
+import DataTable, { type Columna } from '../../shared/ui/DataTable'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
 import {
   actualizarSede,
   crearSede,
@@ -57,42 +58,51 @@ export function SedesPage() {
   if (cargando) return <div className="muted">Cargando sedes…</div>
 
   const columnas: Columna<Sede>[] = [
-    { header: 'Nombre', celda: (s) => s.nombre },
-    { header: 'Ciudad', celda: (s) => s.ciudad || '—' },
-    { header: 'Dirección', celda: (s) => s.direccion || '—' },
+    { id: 'nombre', header: 'Nombre', accessorFn: (s) => s.nombre },
+    { id: 'ciudad', header: 'Ciudad', accessorFn: (s) => s.ciudad || '—' },
+    { id: 'direccion', header: 'Dirección', accessorFn: (s) => s.direccion || '—' },
     {
+      id: 'estado',
       header: 'Estado',
-      celda: (s) => (
-        <span className={s.activo ? 'estado-ok' : 'estado-off'}>
-          {s.activo ? 'Activa' : 'Inactiva'}
-        </span>
-      ),
+      accessorFn: (s) => s.activo,
+      cell: ({ row }) => {
+        const s = row.original
+        return (
+          <span className={s.activo ? 'estado-ok' : 'estado-off'}>
+            {s.activo ? 'Activa' : 'Inactiva'}
+          </span>
+        )
+      },
     },
     {
+      id: 'acciones',
       header: '',
-      ancho: 90,
-      celda: (s) => (
-        <>
-          {puedeEditar && (
-            <button
-              className="icon-btn"
-              title="Editar"
-              onClick={() => {
-                setError(null)
-                setMensaje(null)
-                setEditando(s)
-              }}
-            >
-              <Pencil size={16} />
-            </button>
-          )}
-          {puedeEliminar && (
-            <button className="icon-btn" title="Eliminar" onClick={() => borrar(s)}>
-              <Trash2 size={16} />
-            </button>
-          )}
-        </>
-      ),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const s = row.original
+        return (
+          <>
+            {puedeEditar && (
+              <button
+                className="icon-btn"
+                title="Editar"
+                onClick={() => {
+                  setError(null)
+                  setMensaje(null)
+                  setEditando(s)
+                }}
+              >
+                <Pencil size={16} />
+              </button>
+            )}
+            {puedeEliminar && (
+              <button className="icon-btn" title="Eliminar" onClick={() => borrar(s)}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </>
+        )
+      },
     },
   ]
 
@@ -112,21 +122,14 @@ export function SedesPage() {
       )}
 
       <div className="card">
-        <h2>Sedes</h2>
         {mensaje && <div className="alert-ok">{mensaje}</div>}
         {error && <div className="alert-error">{error}</div>}
 
-        <DataTable
-          columnas={columnas}
-          filas={sedes}
-          keyOf={(s) => s.id}
-          porPagina={15}
-          vacio="Aún no hay sedes registradas."
-        />
+        <DataTable columns={columnas} data={sedes} title="Sedes" initialPageSize={15} />
       </div>
 
       {editando && (
-        <div className="modal-overlay" onClick={() => setEditando(null)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setEditando(null))}>
           <div className="modal card" onClick={(e) => e.stopPropagation()}>
             <SedeForm
               titulo="Editar sede"

@@ -55,18 +55,18 @@ class EquipoBase(BaseModel):
     telefono_representante: str | None = Field(default=None, max_length=50)
     correo_representante: str | None = Field(default=None, max_length=150)
 
-    # --- Especificaciones técnicas ---
-    voltaje_operacion: str | None = Field(default=None, max_length=50)
-    voltaje_maximo: str | None = Field(default=None, max_length=50)
-    corriente_maxima: str | None = Field(default=None, max_length=50)
-    corriente_minima: str | None = Field(default=None, max_length=50)
-    potencia_consumida: str | None = Field(default=None, max_length=50)
-    frecuencia: str | None = Field(default=None, max_length=50)
-    presion: str | None = Field(default=None, max_length=50)
-    velocidad: str | None = Field(default=None, max_length=50)
-    temperatura: str | None = Field(default=None, max_length=50)
-    peso: str | None = Field(default=None, max_length=50)
-    capacidad: str | None = Field(default=None, max_length=50)
+    # --- Especificaciones técnicas (texto libre, pueden ser descriptivas) ---
+    voltaje_operacion: str | None = None
+    voltaje_maximo: str | None = None
+    corriente_maxima: str | None = None
+    corriente_minima: str | None = None
+    potencia_consumida: str | None = None
+    frecuencia: str | None = None
+    presion: str | None = None
+    velocidad: str | None = None
+    temperatura: str | None = None
+    peso: str | None = None
+    capacidad: str | None = None
     fuentes_alimentacion: list[FuenteAlimentacion] = Field(default_factory=list)
 
     # --- Documentación ---
@@ -94,6 +94,7 @@ class EquipoBase(BaseModel):
 
     # --- Mantenimiento / operación ---
     periodicidad_mantenimiento: str | None = Field(default=None, max_length=100)
+    fecha_ultimo_mantenimiento: date | None = None
     calibracion_si: bool = False
     calibracion_no: bool = False
     equipo_movil: bool = False
@@ -120,6 +121,8 @@ class EquipoRead(EquipoBase):
     sede_nombre: str | None = None
     servicio_nombre: str | None = None
     proveedor_nombre: str | None = None
+    # Último mantenimiento efectivo (manual o derivado de la última OT completada).
+    ultimo_mantenimiento_efectivo: date | None = None
 
 
 class ErrorFilaRead(BaseModel):
