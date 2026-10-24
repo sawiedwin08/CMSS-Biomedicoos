@@ -3,7 +3,9 @@ import axios from 'axios'
 import { clearToken, getToken } from '../auth/tokenStorage'
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010/api/v1',
+  // En producción (frontend servido por el backend) usa el mismo origen con ruta relativa.
+  // En desarrollo, el proxy de Vite reenvía /api → el backend.
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
 })
 
 // Adjunta el token JWT (si existe) a cada solicitud.
