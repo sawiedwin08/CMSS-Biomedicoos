@@ -1,9 +1,15 @@
 """Punto de entrada de la API — Sistema de Gestión de Activos Biomédicos + Asistencia."""
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
+
+# Frontend compilado: si existe, el backend lo sirve (una sola dirección en producción).
+_FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 from app.presentation.api.errors import registrar_manejadores_errores
 from app.presentation.api.v1.routers import (
     auth,
@@ -67,15 +73,32 @@ def crear_app() -> FastAPI:
     app.include_router(sistemas_inicio.router, prefix=settings.API_V1_PREFIX)
 
 
-    @app.get("/", include_in_schema=False)
-    def raiz() -> RedirectResponse:
-        # Redirige la raíz a la documentación interactiva (o a /health si docs está off).
-        destino = "/docs" if settings.DEBUG else "/health"
-        return RedirectResponse(url=destino)
-
     @app.get("/health", tags=["Sistema"], summary="Estado del servicio")
     def health() -> dict[str, str]:
         return {"status": "ok", "app": settings.APP_NAME, "env": settings.APP_ENV}
+
+    # --- Producción: servir la SPA compilada desde el mismo backend ---
+    if _FRONTEND_DIST.exists():
+        if (_FRONTEND_DIST / "assets").exists():
+            app.mount(
+                "/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="assets"
+            )
+
+        @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+        def servir_spa(full_path: str):
+            # Las rutas de la API no las maneja la SPA.
+            if full_path.startswith("api/"):
+                return RedirectResponse(url="/health")
+            archivo = _FRONTEND_DIST / full_path
+            if full_path and archivo.is_file():
+                return FileResponse(archivo)
+            return FileResponse(_FRONTEND_DIST / "index.html")
+    else:
+
+        @app.get("/", include_in_schema=False)
+        def raiz() -> RedirectResponse:
+            destino = "/docs" if settings.DEBUG else "/health"
+            return RedirectResponse(url=destino)
 
     return app
 
