@@ -73,6 +73,7 @@ export interface DatosEquipo {
   fecha_vencimiento_invima: string | null
   // Mantenimiento / operación
   periodicidad_mantenimiento: string | null
+  fecha_ultimo_mantenimiento: string | null
   calibracion_si: boolean
   calibracion_no: boolean
   equipo_movil: boolean
@@ -105,6 +106,25 @@ export async function listarEquipos(filtro: FiltroEquipos = {}): Promise<Equipo[
 export async function crearEquipo(payload: DatosEquipo): Promise<Equipo> {
   const { data } = await api.post<Equipo>('/equipos', payload)
   return data
+}
+
+/** Verifica si un serial ya está registrado (opcionalmente excluyendo un equipo al editar). */
+export async function verificarSerial(serial: string, excluirId?: number): Promise<boolean> {
+  const { data } = await api.get<{ existe: boolean }>('/equipos/existe-serial', {
+    params: { serial, excluir_id: excluirId },
+  })
+  return data.existe
+}
+
+/** Verifica si un N° de activo (placa) ya está registrado. */
+export async function verificarNumeroActivo(
+  numero: string,
+  excluirId?: number,
+): Promise<boolean> {
+  const { data } = await api.get<{ existe: boolean }>('/equipos/existe-numero-activo', {
+    params: { numero, excluir_id: excluirId },
+  })
+  return data.existe
 }
 
 export async function actualizarEquipo(

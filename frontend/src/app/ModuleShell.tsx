@@ -10,6 +10,7 @@ export interface NavItem {
   icono: LucideIcon
   texto: string
   visible: boolean
+  badge?: number
 }
 
 /** Cascarón (sidebar + topbar) reutilizable para cada módulo de la plataforma. */
@@ -62,6 +63,21 @@ export function ModuleShell({
                     <Icono size={18} />
                   </span>
                   <span>{i.texto}</span>
+                  {i.badge ? (
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        background: '#c0392b',
+                        color: '#fff',
+                        borderRadius: 10,
+                        padding: '0 7px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {i.badge}
+                    </span>
+                  ) : null}
                 </NavLink>
               )
             })}

@@ -14,6 +14,7 @@ from app.application.interfaces.security import PasswordHasher, TokenService
 from app.core.config import settings
 from app.domain.entities.usuario import Usuario
 from app.domain.exceptions import CredencialesInvalidas
+from app.domain.repositories.activo_repository import ActivoRepository
 from app.domain.repositories.equipo_repository import EquipoRepository
 from app.domain.repositories.modulo_repository import ModuloRepository
 from app.domain.repositories.permiso_repository import PermisoRepository
@@ -23,6 +24,30 @@ from app.domain.repositories.sede_repository import SedeRepository
 from app.domain.repositories.servicio_repository import ServicioRepository
 from app.domain.repositories.usuario_repository import UsuarioRepository
 from app.infrastructure.db.session import get_db
+from app.infrastructure.repositories.activo_repository_sqlalchemy import (
+    ActivoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.documento_activo_repository_sqlalchemy import (
+    DocumentoActivoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.cuenta_correo_repository_sqlalchemy import (
+    CuentaCorreoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.enlace_internet_repository_sqlalchemy import (
+    EnlaceInternetRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.mantenimiento_activo_repository_sqlalchemy import (
+    MantenimientoActivoRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.resumen_repository_sqlalchemy import (
+    ResumenRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.ticket_repository_sqlalchemy import (
+    TicketRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.movimiento_activo_repository_sqlalchemy import (
+    MovimientoActivoRepositorySQLAlchemy,
+)
 from app.infrastructure.repositories.equipo_repository_sqlalchemy import (
     EquipoRepositorySQLAlchemy,
 )
@@ -95,6 +120,38 @@ def get_equipo_repository(db: DbSession) -> EquipoRepository:
     return EquipoRepositorySQLAlchemy(db)
 
 
+def get_activo_repository(db: DbSession) -> ActivoRepository:
+    return ActivoRepositorySQLAlchemy(db)
+
+
+def get_documento_activo_repository(db: DbSession) -> DocumentoActivoRepositorySQLAlchemy:
+    return DocumentoActivoRepositorySQLAlchemy(db)
+
+
+def get_movimiento_activo_repository(db: DbSession) -> MovimientoActivoRepositorySQLAlchemy:
+    return MovimientoActivoRepositorySQLAlchemy(db)
+
+
+def get_mantenimiento_activo_repository(db: DbSession) -> MantenimientoActivoRepositorySQLAlchemy:
+    return MantenimientoActivoRepositorySQLAlchemy(db)
+
+
+def get_enlace_repository(db: DbSession) -> EnlaceInternetRepositorySQLAlchemy:
+    return EnlaceInternetRepositorySQLAlchemy(db)
+
+
+def get_cuenta_correo_repository(db: DbSession) -> CuentaCorreoRepositorySQLAlchemy:
+    return CuentaCorreoRepositorySQLAlchemy(db)
+
+
+def get_ticket_repository(db: DbSession) -> TicketRepositorySQLAlchemy:
+    return TicketRepositorySQLAlchemy(db)
+
+
+def get_resumen_repository(db: DbSession) -> ResumenRepositorySQLAlchemy:
+    return ResumenRepositorySQLAlchemy(db)
+
+
 def get_modulo_repository(db: DbSession) -> ModuloRepository:
     return ModuloRepositorySQLAlchemy(db)
 
@@ -131,6 +188,24 @@ SedeRepo = Annotated[SedeRepository, Depends(get_sede_repository)]
 ServicioRepo = Annotated[ServicioRepository, Depends(get_servicio_repository)]
 ProveedorRepo = Annotated[ProveedorRepository, Depends(get_proveedor_repository)]
 EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
+ActivoRepo = Annotated[ActivoRepository, Depends(get_activo_repository)]
+DocumentoActivoRepo = Annotated[
+    DocumentoActivoRepositorySQLAlchemy, Depends(get_documento_activo_repository)
+]
+MovimientoActivoRepo = Annotated[
+    MovimientoActivoRepositorySQLAlchemy, Depends(get_movimiento_activo_repository)
+]
+MantenimientoActivoRepo = Annotated[
+    MantenimientoActivoRepositorySQLAlchemy, Depends(get_mantenimiento_activo_repository)
+]
+EnlaceRepo = Annotated[
+    EnlaceInternetRepositorySQLAlchemy, Depends(get_enlace_repository)
+]
+CuentaCorreoRepo = Annotated[
+    CuentaCorreoRepositorySQLAlchemy, Depends(get_cuenta_correo_repository)
+]
+TicketRepo = Annotated[TicketRepositorySQLAlchemy, Depends(get_ticket_repository)]
+ResumenRepo = Annotated[ResumenRepositorySQLAlchemy, Depends(get_resumen_repository)]
 ModuloRepo = Annotated[ModuloRepository, Depends(get_modulo_repository)]
 DocumentoEquipoRepo = Annotated[DocumentoEquipoRepositorySQLAlchemy, Depends(get_documento_equipo_repository)]
 MovimientoEquipoRepo = Annotated[MovimientoEquipoRepositorySQLAlchemy, Depends(get_movimiento_equipo_repository)]

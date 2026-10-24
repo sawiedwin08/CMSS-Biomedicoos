@@ -13,7 +13,10 @@ import {
   type ChecklistEquipoRead,
   type EstadoChecklist,
 } from './mantenimientoApi'
-import { CrearOrdenTrabajoModal } from './CrearOrdenTrabajoModal'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
+import { AccionesEstadoLote } from './AccionesEstadoLote'
+import { CrearOTModal } from './CrearOTModal'
+import { EquiposMantener } from './EquiposMantener'
 
 const COLORES_ESTADO: Record<EstadoOT, string> = {
   pendiente: '#FFA500',
@@ -43,6 +46,24 @@ export function MantenimientoPage() {
   const [filtroEstado, setFiltroEstado] = useState<EstadoOT | 'todas'>('todas')
   const [seleccionada, setSeleccionada] = useState<OTRead | null>(null)
   const [mostrarCrearOT, setMostrarCrearOT] = useState(false)
+  const [mensaje, setMensaje] = useState<string | null>(null)
+  const [seleccion, setSeleccion] = useState<Set<number>>(new Set())
+  const [tab, setTab] = useState<'ot' | 'equipos'>(() => {
+    try {
+      return localStorage.getItem('mant_tab') === 'equipos' ? 'equipos' : 'ot'
+    } catch {
+      return 'ot'
+    }
+  })
+
+  function cambiarTab(t: 'ot' | 'equipos') {
+    setTab(t)
+    try {
+      localStorage.setItem('mant_tab', t)
+    } catch {
+      /* ignore */
+    }
+  }
 
   useEffect(() => {
     cargarOrdenes()
@@ -74,8 +95,59 @@ export function MantenimientoPage() {
     ? ordenes
     : ordenes.filter(o => o.estado === filtroEstado)
 
+  // Seleccionables: todas menos las completadas (bloqueadas).
+  const idsSeleccionables = ordenesFiltradas
+    .filter((o) => o.estado !== 'completada')
+    .map((o) => o.id)
+  const todasSel = idsSeleccionables.length > 0 && idsSeleccionables.every((id) => seleccion.has(id))
+
+  function toggleSel(id: number) {
+    setSeleccion((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  function toggleTodasSel() {
+    setSeleccion(() => (todasSel ? new Set() : new Set(idsSeleccionables)))
+  }
+  async function trasLote(msg: string) {
+    setMensaje(msg)
+    setSeleccion(new Set())
+    await cargarOrdenes()
+    setTimeout(() => setMensaje(null), 4000)
+  }
+
+  const tabsBar = (
+    <div className="tabs">
+      <button
+        className={`tab ${tab === 'ot' ? 'activo' : ''}`}
+        onClick={() => cambiarTab('ot')}
+      >
+        Órdenes de trabajo
+      </button>
+      <button
+        className={`tab ${tab === 'equipos' ? 'activo' : ''}`}
+        onClick={() => cambiarTab('equipos')}
+      >
+        Mantenimientos
+      </button>
+    </div>
+  )
+
+  if (tab === 'equipos') {
+    return (
+      <div className="stack">
+        {tabsBar}
+        <EquiposMantener />
+      </div>
+    )
+  }
+
   return (
     <div className="stack">
+      {tabsBar}
       <div className="card">
         <div className="detail-head">
           <h2>Órdenes de Trabajo</h2>
@@ -103,6 +175,15 @@ export function MantenimientoPage() {
           ))}
         </form>
 
+        {mensaje && <div className="alert-ok">{mensaje}</div>}
+        {seleccion.size > 0 && (
+          <AccionesEstadoLote
+            ids={[...seleccion]}
+            onLimpiar={() => setSeleccion(new Set())}
+            onHecho={trasLote}
+          />
+        )}
+
         {/* Tabla de órdenes */}
         {cargando ? (
           <div className="muted">Cargando órdenes de trabajo…</div>
@@ -112,35 +193,75 @@ export function MantenimientoPage() {
             <p>No hay órdenes de trabajo</p>
           </div>
         ) : (
-          <table className="tabla">
+          <div className="docs-tabla-container">
+          <table className="docs-tabla">
             <thead>
               <tr>
+                <th style={{ width: 36 }}>
+                  <input
+                    type="checkbox"
+                    checked={todasSel}
+                    onChange={toggleTodasSel}
+                    disabled={idsSeleccionables.length === 0}
+                  />
+                </th>
                 <th>ID</th>
                 <th>Equipo</th>
                 <th>Tipo</th>
                 <th>Estado</th>
                 <th>Descripción</th>
                 <th>Fecha Prog.</th>
-                <th></th>
+                <th style={{ textAlign: 'right' }}>Acción</th>
               </tr>
             </thead>
             <tbody>
               {ordenesFiltradas.map((ot) => (
                 <tr key={ot.id}>
-                  <td>#{ot.id}</td>
-                  <td>{ot.equipo_nombre || '—'}</td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={seleccion.has(ot.id)}
+                      disabled={ot.estado === 'completada'}
+                      title={ot.estado === 'completada' ? 'Completada: bloqueada' : ''}
+                      onChange={() => toggleSel(ot.id)}
+                    />
+                  </td>
+                  <td style={{ fontWeight: 600 }}>#{ot.id}</td>
+                  <td className="docs-nombre-col">
+                    {ot.equipo_codigo && (
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontVariantNumeric: 'tabular-nums',
+                          marginRight: 6,
+                        }}
+                      >
+                        {ot.equipo_codigo}
+                      </span>
+                    )}
+                    <span style={{ color: 'var(--muted)' }}>{ot.equipo_nombre || '—'}</span>
+                  </td>
                   <td>{EMOJIS_TIPO[ot.tipo]} {ot.tipo}</td>
                   <td>
                     <span
                       className="badge"
-                      style={{ backgroundColor: COLORES_ESTADO[ot.estado], color: '#fff' }}
+                      style={{
+                        backgroundColor: COLORES_ESTADO[ot.estado],
+                        color: '#fff',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                      }}
                     >
                       {ETIQUETAS_ESTADO[ot.estado]}
                     </span>
                   </td>
-                  <td>{ot.descripcion ?? '—'}</td>
-                  <td>{ot.fecha_programada ? formatearFecha(ot.fecha_programada) : '—'}</td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td className="docs-nombre-col">{ot.descripcion ?? '—'}</td>
+                  <td className="docs-usuario-col">
+                    {ot.fecha_programada ? formatearFecha(ot.fecha_programada) : '—'}
+                  </td>
+                  <td className="docs-acciones-col">
                     <button
                       className="icon-btn"
                       onClick={() => setSeleccionada(ot)}
@@ -153,12 +274,13 @@ export function MantenimientoPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {/* Modal de crear OT */}
       {mostrarCrearOT && (
-        <CrearOrdenTrabajoModal
+        <CrearOTModal
           onClose={() => setMostrarCrearOT(false)}
           onSuccess={() => {
             setMostrarCrearOT(false)
@@ -259,10 +381,19 @@ function DetalleOTModal({ ot, onClose, onSave }: DetalleOTModalProps) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(onClose)}>
       <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
         <div className="detail-head">
-          <h3>{EMOJIS_TIPO[ot.tipo]} Orden #{ot.id}</h3>
+          <div>
+            <h3 style={{ margin: 0 }}>{EMOJIS_TIPO[ot.tipo]} Orden #{ot.id}</h3>
+            {(ot.equipo_codigo || ot.equipo_nombre) && (
+              <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}>
+                {ot.equipo_codigo && <strong>{ot.equipo_codigo}</strong>}
+                {ot.equipo_codigo && ot.equipo_nombre ? ' · ' : ''}
+                {ot.equipo_nombre}
+              </p>
+            )}
+          </div>
           <button className="btn-ghost" onClick={onClose}>
             <X size={18} />
           </button>
@@ -273,6 +404,14 @@ function DetalleOTModal({ ot, onClose, onSave }: DetalleOTModalProps) {
         ) : (
           <div style={{ padding: '16px 0' }}>
             <h4 className="grupo-tit">Información General</h4>
+
+            <div className="field">
+              <label>Equipo</label>
+              <p className="muted">
+                {ot.equipo_codigo ? `${ot.equipo_codigo} · ` : ''}
+                {ot.equipo_nombre ?? '—'}
+              </p>
+            </div>
 
             <div className="field">
               <label>Estado</label>

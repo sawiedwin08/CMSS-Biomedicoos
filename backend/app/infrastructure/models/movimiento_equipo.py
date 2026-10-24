@@ -14,14 +14,15 @@ from app.infrastructure.db.base import Base
 
 class MovimientoEquipo(Base):
     __tablename__ = "movimientos_equipo"
+    __table_args__ = {"schema": "biomedicos"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    equipo_id: Mapped[int] = mapped_column(ForeignKey("equipos.id"), index=True)
+    equipo_id: Mapped[int] = mapped_column(ForeignKey("biomedicos.equipos.id"), index=True)
 
-    sede_origen_id: Mapped[int | None] = mapped_column(ForeignKey("sedes.id"))
-    servicio_origen_id: Mapped[int | None] = mapped_column(ForeignKey("servicios.id"))
-    sede_destino_id: Mapped[int | None] = mapped_column(ForeignKey("sedes.id"))
-    servicio_destino_id: Mapped[int | None] = mapped_column(ForeignKey("servicios.id"))
+    sede_origen_id: Mapped[int | None] = mapped_column(ForeignKey("comun.sedes.id"))
+    servicio_origen_id: Mapped[int | None] = mapped_column(ForeignKey("comun.servicios.id"))
+    sede_destino_id: Mapped[int | None] = mapped_column(ForeignKey("comun.sedes.id"))
+    servicio_destino_id: Mapped[int | None] = mapped_column(ForeignKey("comun.servicios.id"))
 
     motivo: Mapped[str | None] = mapped_column(String(250))
     responsable: Mapped[str | None] = mapped_column(String(150))

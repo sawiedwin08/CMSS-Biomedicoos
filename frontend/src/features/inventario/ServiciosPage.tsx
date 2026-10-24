@@ -4,7 +4,8 @@ import { type FormEvent, useEffect, useState } from 'react'
 import type { Sede } from '../../entities/sede'
 import type { Servicio } from '../../entities/servicio'
 import { useAuth } from '../../shared/auth/AuthContext'
-import { type Columna, DataTable } from '../../shared/ui/DataTable'
+import DataTable, { type Columna } from '../../shared/ui/DataTable'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
 import { listarSedes } from './sedesApi'
 import {
   actualizarServicio,
@@ -66,41 +67,50 @@ export function ServiciosPage() {
   const sinSedes = sedes.length === 0
 
   const columnas: Columna<Servicio>[] = [
-    { header: 'Servicio', celda: (s) => s.nombre },
-    { header: 'Sede', celda: (s) => s.sede_nombre || '—' },
+    { id: 'nombre', header: 'Servicio', accessorFn: (s) => s.nombre },
+    { id: 'sede', header: 'Sede', accessorFn: (s) => s.sede_nombre || '—' },
     {
+      id: 'estado',
       header: 'Estado',
-      celda: (s) => (
-        <span className={s.activo ? 'estado-ok' : 'estado-off'}>
-          {s.activo ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      accessorFn: (s) => s.activo,
+      cell: ({ row }) => {
+        const s = row.original
+        return (
+          <span className={s.activo ? 'estado-ok' : 'estado-off'}>
+            {s.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        )
+      },
     },
     {
+      id: 'acciones',
       header: '',
-      ancho: 90,
-      celda: (s) => (
-        <>
-          {puedeEditar && (
-            <button
-              className="icon-btn"
-              title="Editar"
-              onClick={() => {
-                setError(null)
-                setMensaje(null)
-                setEditando(s)
-              }}
-            >
-              <Pencil size={16} />
-            </button>
-          )}
-          {puedeEliminar && (
-            <button className="icon-btn" title="Eliminar" onClick={() => borrar(s)}>
-              <Trash2 size={16} />
-            </button>
-          )}
-        </>
-      ),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const s = row.original
+        return (
+          <>
+            {puedeEditar && (
+              <button
+                className="icon-btn"
+                title="Editar"
+                onClick={() => {
+                  setError(null)
+                  setMensaje(null)
+                  setEditando(s)
+                }}
+              >
+                <Pencil size={16} />
+              </button>
+            )}
+            {puedeEliminar && (
+              <button className="icon-btn" title="Eliminar" onClick={() => borrar(s)}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </>
+        )
+      },
     },
   ]
 
@@ -126,21 +136,14 @@ export function ServiciosPage() {
         ))}
 
       <div className="card">
-        <h2>Servicios</h2>
         {mensaje && <div className="alert-ok">{mensaje}</div>}
         {error && <div className="alert-error">{error}</div>}
 
-        <DataTable
-          columnas={columnas}
-          filas={servicios}
-          keyOf={(s) => s.id}
-          porPagina={15}
-          vacio="Aún no hay servicios registrados."
-        />
+        <DataTable columns={columnas} data={servicios} title="Servicios" initialPageSize={15} />
       </div>
 
       {editando && (
-        <div className="modal-overlay" onClick={() => setEditando(null)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setEditando(null))}>
           <div className="modal card" onClick={(e) => e.stopPropagation()}>
             <ServicioForm
               titulo="Editar servicio"

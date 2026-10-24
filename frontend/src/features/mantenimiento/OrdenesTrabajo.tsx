@@ -1,11 +1,14 @@
-import { Wrench, X, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
+import { Wrench, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { api } from '../../shared/api/client'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
+import { AccionesEstadoLote } from './AccionesEstadoLote'
 import {
   obtenerOrdenesTrabajo,
   obtenerChecklist,
   obtenerEjecucionOT,
+  registrarEjecucionPaso,
   type OTRead,
   type EstadoOT,
   type ChecklistEquipoRead,
@@ -17,6 +20,7 @@ interface OrdenesTrabajoProps {
   equipoId: number
   equipoNombre?: string
   puedeEditar: boolean
+  onDocumentosChanged?: () => void
 }
 
 const COLORES_ESTADO: Record<EstadoOT, string> = {
@@ -33,11 +37,17 @@ const ETIQUETAS_ESTADO: Record<EstadoOT, string> = {
   cancelada: 'Cancelada',
 }
 
-export function OrdenesTrabajo({ equipoId, equipoNombre, puedeEditar }: OrdenesTrabajoProps) {
+export function OrdenesTrabajo({
+  equipoId,
+  equipoNombre,
+  onDocumentosChanged,
+}: OrdenesTrabajoProps) {
   const [ordenes, setOrdenes] = useState<OTRead[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [seleccionada, setSeleccionada] = useState<OTRead | null>(null)
+  const [seleccion, setSeleccion] = useState<Set<number>>(new Set())
+  const [mensaje, setMensaje] = useState<string | null>(null)
 
   useEffect(() => {
     cargarOrdenes()
@@ -65,25 +75,70 @@ function formatearFecha(fechaISO: string): string {
     })
   }
 
+  const idsSeleccionables = ordenes.filter((o) => o.estado !== 'completada').map((o) => o.id)
+  const todasSel = idsSeleccionables.length > 0 && idsSeleccionables.every((id) => seleccion.has(id))
+  function toggleSel(id: number) {
+    setSeleccion((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  function toggleTodasSel() {
+    setSeleccion(() => (todasSel ? new Set() : new Set(idsSeleccionables)))
+  }
+  async function trasLote(msg: string) {
+    setMensaje(msg)
+    setSeleccion(new Set())
+    await cargarOrdenes()
+    setTimeout(() => setMensaje(null), 4000)
+  }
+
   if (cargando) return <div className="muted small">Cargando órdenes de trabajo…</div>
 
   return (
-    <div className="ordenes-section">
-      <h4 className="ordenes-titulo" style={{ marginBottom: '12px' }}>
+    <div>
+      <h4
+        style={{
+          margin: '0 0 12px',
+          fontSize: '0.95rem',
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
         <Wrench size={20} /> Órdenes de Trabajo
       </h4>
 
       {error && <div className="alert-error">{error}</div>}
+      {mensaje && <div className="alert-ok">{mensaje}</div>}
+      {seleccion.size > 0 && (
+        <AccionesEstadoLote
+          ids={[...seleccion]}
+          onLimpiar={() => setSeleccion(new Set())}
+          onHecho={trasLote}
+        />
+      )}
 
       {ordenes.length === 0 ? (
         <div className="muted small" style={{ textAlign: 'center', padding: '20px' }}>
           Sin órdenes de trabajo.
         </div>
       ) : (
-        <div className="ordenes-tabla-container">
-          <table className="ordenes-tabla">
+        <div className="docs-tabla-container">
+          <table className="docs-tabla">
             <thead>
               <tr>
+                <th style={{ width: 36 }}>
+                  <input
+                    type="checkbox"
+                    checked={todasSel}
+                    onChange={toggleTodasSel}
+                    disabled={idsSeleccionables.length === 0}
+                  />
+                </th>
                 <th>ID</th>
                 <th>Equipo</th>
                 <th>Tipo</th>
@@ -96,14 +151,38 @@ function formatearFecha(fechaISO: string): string {
             <tbody>
               {ordenes.map((ot) => (
                 <tr key={ot.id} onClick={() => setSeleccionada(ot)} style={{ cursor: 'pointer' }}>
-                  <td className="ordenes-id-col">#{ot.id}</td>
-                  <td className="ordenes-equipo-col">{equipoNombre || '—'}</td>
-                  <td className="ordenes-tipo-col">
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={seleccion.has(ot.id)}
+                      disabled={ot.estado === 'completada'}
+                      title={ot.estado === 'completada' ? 'Completada: bloqueada' : ''}
+                      onChange={() => toggleSel(ot.id)}
+                    />
+                  </td>
+                  <td style={{ fontWeight: 600 }}>#{ot.id}</td>
+                  <td className="docs-nombre-col">
+                    {ot.equipo_codigo && (
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          fontVariantNumeric: 'tabular-nums',
+                          marginRight: 6,
+                        }}
+                      >
+                        {ot.equipo_codigo}
+                      </span>
+                    )}
+                    <span style={{ color: 'var(--muted)' }}>
+                      {ot.equipo_nombre || equipoNombre || '—'}
+                    </span>
+                  </td>
+                  <td>
                     {ot.tipo === 'preventivo' && '🛡️ Preventivo'}
                     {ot.tipo === 'correctivo' && '🔧 Correctivo'}
                     {ot.tipo === 'calibracion' && '⚖️ Calibración'}
                   </td>
-                  <td className="ordenes-estado-col">
+                  <td>
                     <span
                       className="estado-badge"
                       style={{
@@ -118,13 +197,11 @@ function formatearFecha(fechaISO: string): string {
                       {ETIQUETAS_ESTADO[ot.estado]}
                     </span>
                   </td>
-                  <td className="ordenes-fecha-col">
+                  <td className="docs-usuario-col">
                     {ot.fecha_programada ? formatearFecha(ot.fecha_programada) : '—'}
                   </td>
-                  <td className="ordenes-tecnico-col">
-                    {ot.tecnico_nombre ?? '—'}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td className="docs-usuario-col">{ot.tecnico_nombre ?? '—'}</td>
+                  <td className="docs-acciones-col">
                     <button className="icon-btn" title="Ver detalle">
                       Ver
                     </button>
@@ -136,107 +213,15 @@ function formatearFecha(fechaISO: string): string {
         </div>
       )}
 
-{seleccionada && (
+      {seleccionada && (
         <DetalleOTModal
           ot={seleccionada}
           equipoId={equipoId}
           onCerrar={() => setSeleccionada(null)}
           onActualizar={() => cargarOrdenes()}
+          onDocumentosChanged={onDocumentosChanged}
         />
       )}
-
-      <style>{`
-        .ordenes-section {
-          margin-top: 24px;
-          padding-top: 16px;
-          border-top: 1px solid var(--color-border);
-        }
-
-        .ordenes-titulo {
-          margin: 0;
-          color: var(--color-text);
-          font-size: 0.95rem;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .ordenes-tabla-container {
-          border: 1px solid var(--color-border);
-          border-radius: 6px;
-          overflow: hidden;
-          background: var(--color-bg);
-        }
-
-        .ordenes-tabla {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 0.85rem;
-        }
-
-        .ordenes-tabla thead {
-          background: var(--color-bg-secondary);
-          border-bottom: 1px solid var(--color-border);
-          font-weight: 600;
-        }
-
-        .ordenes-tabla th {
-          padding: 10px 12px;
-          text-align: left;
-          font-size: 0.75rem;
-          text-transform: uppercase;
-          color: var(--color-text-secondary);
-        }
-
-        .ordenes-tabla tbody tr {
-          border-bottom: 1px solid var(--color-border);
-          transition: background 0.2s;
-        }
-
-        .ordenes-tabla tbody tr:hover {
-          background: var(--color-bg-hover);
-        }
-
-        .ordenes-tabla td {
-          padding: 10px 12px;
-          color: var(--color-text);
-        }
-
-        .ordenes-id-col {
-          font-weight: 600;
-          font-size: 0.9rem;
-        }
-
-        .ordenes-tipo-col {
-          font-size: 0.85rem;
-        }
-
-        .ordenes-estado-col {
-          font-size: 0.85rem;
-        }
-
-        .ordenes-fecha-col {
-          color: var(--color-text-secondary);
-          font-size: 0.8rem;
-        }
-
-        .ordenes-tecnico-col {
-          color: var(--color-text-secondary);
-          font-size: 0.8rem;
-        }
-
-        @media (max-width: 800px) {
-          .ordenes-tabla {
-            font-size: 0.75rem;
-          }
-
-          .ordenes-tabla th,
-          .ordenes-tabla td {
-            padding: 8px 6px;
-          }
-        }
-      `}</style>
     </div>
   )
 }
@@ -245,12 +230,13 @@ function DetalleOTModal({
   ot,
   equipoId,
   onCerrar,
-  onActualizar,
+  onDocumentosChanged,
 }: {
   ot: OTRead
   equipoId: number
   onCerrar: () => void
   onActualizar: () => void
+  onDocumentosChanged?: () => void
 }) {
   const [checklist, setChecklist] = useState<ChecklistEquipoRead | null>(null)
   const [ejecucion, setEjecucion] = useState<Record<number, EstadoChecklist>>({})
@@ -286,7 +272,25 @@ function DetalleOTModal({
     }
   }
 
+  // Una OT completada queda bloqueada (no se marca).
+  const bloqueada = ot.estado === 'completada'
 
+  async function marcarPaso(pasoId: number, estado: EstadoChecklist) {
+    if (bloqueada) return
+    const anterior = ejecucion[pasoId]
+    setEjecucion((prev) => ({ ...prev, [pasoId]: estado }))
+    try {
+      await registrarEjecucionPaso(ot.id, { paso_id: pasoId, estado })
+    } catch {
+      // revertir si falla
+      setEjecucion((prev) => {
+        const next = { ...prev }
+        if (anterior) next[pasoId] = anterior
+        else delete next[pasoId]
+        return next
+      })
+    }
+  }
 
   function formatearFecha(fechaISO: string): string {
     const fecha = new Date(fechaISO)
@@ -298,11 +302,18 @@ function DetalleOTModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(onCerrar)}>
       <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
         <div className="detail-head">
           <div>
             <h3 style={{ margin: 0 }}>OT #{ot.id}</h3>
+            {(ot.equipo_codigo || ot.equipo_nombre) && (
+              <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--texto)' }}>
+                {ot.equipo_codigo && <strong>{ot.equipo_codigo}</strong>}
+                {ot.equipo_codigo && ot.equipo_nombre ? ' · ' : ''}
+                {ot.equipo_nombre}
+              </p>
+            )}
             <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}>
               {ot.tipo === 'preventivo' && '🛡️ Preventivo'}
               {ot.tipo === 'correctivo' && '🔧 Correctivo'}
@@ -394,18 +405,44 @@ function DetalleOTModal({
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                          {estado === 'R' && (
-                            <CheckCircle size={18} style={{ color: 'var(--ok)' }} />
-                          )}
-                          {estado === 'NR' && (
-                            <XCircle size={18} style={{ color: 'var(--error-tx)' }} />
-                          )}
-                          {estado === 'PA' && (
-                            <AlertTriangle size={18} style={{ color: '#FFA500' }} />
-                          )}
-                          {!estado && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>Sin ejecutar</span>
-                          )}
+                          {(['R', 'NR', 'PA'] as const).map((op) => {
+                            const activo = estado === op
+                            const color =
+                              op === 'R'
+                                ? 'var(--ok)'
+                                : op === 'NR'
+                                  ? 'var(--error-tx)'
+                                  : '#e08600'
+                            return (
+                              <button
+                                key={op}
+                                type="button"
+                                disabled={bloqueada}
+                                onClick={() => marcarPaso(paso.id, op)}
+                                title={
+                                  op === 'R'
+                                    ? 'Realizado'
+                                    : op === 'NR'
+                                      ? 'No realizado'
+                                      : 'Presenta anomalía'
+                                }
+                                style={{
+                                  width: 32,
+                                  height: 30,
+                                  borderRadius: 6,
+                                  cursor: bloqueada ? 'not-allowed' : 'pointer',
+                                  border: `1.5px solid ${activo ? color : 'var(--borde)'}`,
+                                  background: activo ? color : '#fff',
+                                  color: activo ? '#fff' : color,
+                                  fontWeight: 700,
+                                  fontSize: '0.72rem',
+                                  opacity: bloqueada && !activo ? 0.5 : 1,
+                                }}
+                              >
+                                {op}
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
                     )
@@ -434,6 +471,7 @@ function DetalleOTModal({
           checklist={checklist}
           ejecucion={ejecucion}
           onClose={() => setVerRutina(false)}
+          onGuardado={onDocumentosChanged}
         />
       )}
     </div>

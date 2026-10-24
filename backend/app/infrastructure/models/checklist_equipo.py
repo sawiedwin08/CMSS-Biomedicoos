@@ -9,9 +9,12 @@ from app.infrastructure.models.mixins import TimestampMixin
 class ChecklistEquipo(Base, TimestampMixin):
     """Define los pasos que debe seguir un mantenimiento para un equipo específico."""
     __tablename__ = "checklists_equipo"
+    __table_args__ = {"schema": "biomedicos"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    equipo_id: Mapped[int] = mapped_column(ForeignKey("equipos.id"), index=True, unique=True)
+    equipo_id: Mapped[int] = mapped_column(
+        ForeignKey("biomedicos.equipos.id"), index=True, unique=True
+    )
 
     nombre: Mapped[str] = mapped_column(String(200))
     descripcion: Mapped[str | None] = mapped_column(Text)
@@ -28,9 +31,12 @@ class ChecklistEquipo(Base, TimestampMixin):
 class ChecklistPaso(Base):
     """Cada paso individual del checklist."""
     __tablename__ = "checklist_pasos"
+    __table_args__ = {"schema": "biomedicos"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    checklist_id: Mapped[int] = mapped_column(ForeignKey("checklists_equipo.id"), index=True)
+    checklist_id: Mapped[int] = mapped_column(
+        ForeignKey("biomedicos.checklists_equipo.id"), index=True
+    )
 
     orden: Mapped[int]
     descripcion: Mapped[str] = mapped_column(String(500))

@@ -6,10 +6,13 @@ import {
   ESTADOS,
   etiquetaEstado,
   etiquetaPropiedad,
+  proximoMantenimiento,
+  semaforoVencimiento,
 } from '../../entities/equipo'
 import type { Sede } from '../../entities/sede'
 import { useAuth } from '../../shared/auth/AuthContext'
-import { type Columna, DataTable } from '../../shared/ui/DataTable'
+import DataTable, { type Columna } from '../../shared/ui/DataTable'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
 import { type FiltroEquipos, listarEquipos, obtenerFotoUrl } from './equiposApi'
 import { DocumentosEquipo } from './DocumentosEquipo'
 import { HistorialMovimientos } from './HistorialMovimientos'
@@ -17,6 +20,7 @@ import { HojaVida } from './HojaVida'
 import { OrdenesTrabajo } from '../mantenimiento/OrdenesTrabajo'
 import { listarSedes } from './sedesApi'
 import { listarDocumentos, type DocumentoEquipo } from './documentosApi'
+import { TablaDocumentos } from './TablaDocumentos'
 
 function detalleError(err: unknown, porDefecto: string): string {
   return (
@@ -75,19 +79,48 @@ export function EquiposPage() {
   if (cargando) return <div className="muted">Cargando equipos…</div>
 
   const columnas: Columna<Equipo>[] = [
-    { header: 'Código interno', celda: (e) => e.codigo_interno },
-    { header: 'Nombre de equipo', celda: (e) => e.nombre },
-    { header: 'Marca', celda: (e) => e.marca || '—' },
-    { header: 'Modelo', celda: (e) => e.modelo || '—' },
-    { header: 'Serial', celda: (e) => e.serial_fabricante },
     {
-      header: 'Ubicación',
-      celda: (e) =>
-        `${e.sede_nombre || '—'}${e.servicio_nombre ? ` / ${e.servicio_nombre}` : ''}`,
+      id: 'codigo_interno',
+      header: 'Código interno',
+      accessorFn: (e) => e.codigo_interno,
+      size: 120,
+      meta: { align: 'center', mono: true },
     },
     {
+      id: 'nombre',
+      header: 'Nombre de equipo',
+      accessorFn: (e) => e.nombre,
+      meta: { truncate: true },
+    },
+    {
+      id: 'marca',
+      header: 'Marca',
+      accessorFn: (e) => e.marca || '—',
+      size: 120,
+      meta: { truncate: true },
+    },
+    {
+      id: 'modelo',
+      header: 'Modelo',
+      accessorFn: (e) => e.modelo || '—',
+      size: 120,
+      meta: { truncate: true },
+    },
+    {
+      id: 'serial',
+      header: 'Serial',
+      accessorFn: (e) => e.serial_fabricante,
+      size: 140,
+      meta: { mono: true, truncate: true },
+    },
+    {
+      id: 'estado',
       header: 'Estado',
-      celda: (e) => {
+      accessorFn: (e) => e.estado,
+      size: 150,
+      meta: { align: 'center' },
+      cell: ({ row }) => {
+        const e = row.original
         const colores: Record<string, { bg: string; text: string }> = {
           operativo: { bg: '#d4edda', text: '#155724' },
           en_mantenimiento: { bg: '#FFD700', text: '#000' },
@@ -114,10 +147,17 @@ export function EquiposPage() {
       },
     },
     {
+      id: 'acciones',
       header: '',
-      ancho: 50,
-      celda: (e) => (
-        <button className="icon-btn" title="Ver resumen" onClick={() => abrirResumen(e)}>
+      enableSorting: false,
+      size: 64,
+      meta: { align: 'center' },
+      cell: ({ row }) => (
+        <button
+          className="icon-btn"
+          title="Ver resumen"
+          onClick={() => abrirResumen(row.original)}
+        >
           <Eye size={16} />
         </button>
       ),
@@ -170,11 +210,10 @@ export function EquiposPage() {
         {error && <div className="alert-error">{error}</div>}
 
         <DataTable
-          columnas={columnas}
-          filas={equipos}
-          keyOf={(e) => e.id}
-          porPagina={50}
-          vacio="No hay equipos que coincidan."
+          columns={columnas}
+          data={equipos}
+          enableSearch={false}
+          initialPageSize={50}
         />
       </div>
 
@@ -208,6 +247,34 @@ function Dato({ k, val }: { k: string; val: string }) {
   )
 }
 
+/** Dato de una fecha de vencimiento con semáforo de color (INVIMA, garantía, etc.). */
+function DatoVencimiento({ k, fecha }: { k: string; fecha: string | null }) {
+  const s = fecha ? semaforoVencimiento(fecha) : null
+  const titulo = s
+    ? s.dias < 0
+      ? `Vencido hace ${Math.abs(s.dias)} día(s)`
+      : s.dias === 0
+        ? 'Vence hoy'
+        : `Vence en ${s.dias} día(s)`
+    : undefined
+  return (
+    <div className="rz-dato">
+      <span className="rz-k">{k}</span>
+      <span className="rz-v">
+        {!fecha ? (
+          '—'
+        ) : s ? (
+          <span className={`invima-venc invima-${s.estado}`} title={titulo}>
+            {fecha}
+          </span>
+        ) : (
+          fecha
+        )}
+      </span>
+    </div>
+  )
+}
+
 function ResumenModal({
   equipo: e,
   fotoUrl,
@@ -225,28 +292,33 @@ function ResumenModal({
   const [verMovimientos, setVerMovimientos] = useState(false)
   const [verMantenimiento, setVerMantenimiento] = useState(false)
   const [documentos, setDocumentos] = useState<DocumentoEquipo[]>([])
-  const [cargandoDocs, setCargandoDocs] = useState(false)
   const [años, setAños] = useState<number[]>([])
   const [añoSeleccionado, setAñoSeleccionado] = useState<number | null>(null)
   const [verDocumentacion, setVerDocumentacion] = useState(false)
 
+  async function recargarDocumentos() {
+    try {
+      const docs = await listarDocumentos(e.id)
+      setDocumentos(docs)
+      // Extraer años solo de documentos de mantenimiento (que tienen año_documento)
+      const añosUnicos = Array.from(
+        new Set(docs.filter((d) => d.año_documento).map((d) => d.año_documento!)),
+      )
+        .sort((a, b) => b - a)
+        .slice(0, 3)
+      setAños(añosUnicos)
+    } catch {
+      setDocumentos([])
+    }
+  }
+
   useEffect(() => {
-    listarDocumentos(e.id)
-      .then((docs) => {
-        setDocumentos(docs)
-        // Extraer años solo de documentos de mantenimiento (que tienen año_documento)
-        const añosUnicos = Array.from(
-          new Set(docs.filter(d => d.año_documento).map((d) => d.año_documento!))
-        )
-          .sort((a, b) => b - a)
-          .slice(0, 3)
-        setAños(añosUnicos)
-      })
-      .catch(() => setDocumentos([]))
+    recargarDocumentos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [e.id])
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(onCerrar)}>
       <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
         <div className="detail-head">
           <h3>
@@ -351,7 +423,11 @@ function ResumenModal({
 
             <h4 className="grupo-tit">Registro INVIMA</h4>
             <Dato k="Registro" val={D(e.registro_invima)} />
-            <Dato k="Vencimiento" val={D(e.fecha_vencimiento_invima)} />
+            <DatoVencimiento k="Vencimiento" fecha={e.fecha_vencimiento_invima} />
+
+            <h4 className="grupo-tit">Garantía</h4>
+            <Dato k="Inicio" val={D(e.fecha_inicial_garantia)} />
+            <DatoVencimiento k="Vencimiento" fecha={e.fecha_final_garantia} />
 
             <h4 className="grupo-tit">Documentación</h4>
             <Dato k="Fuente alimentación" val={L(e.fuentes_alimentacion)} />
@@ -360,6 +436,29 @@ function ResumenModal({
 
             <h4 className="grupo-tit">Mantenimiento</h4>
             <Dato k="Periodicidad" val={D(e.periodicidad_mantenimiento)} />
+            <div className="rz-dato">
+              <span className="rz-k">Último mantenimiento</span>
+              <span className="rz-v">
+                {(() => {
+                  const fecha = e.ultimo_mantenimiento_efectivo
+                  if (!fecha) return '—'
+                  const proxima = proximoMantenimiento(fecha, e.periodicidad_mantenimiento)
+                  const s = proxima ? semaforoVencimiento(proxima) : null
+                  if (!s || !proxima) return fecha
+                  const titulo =
+                    s.dias < 0
+                      ? `Próximo mantenimiento: ${proxima} · atrasado ${Math.abs(s.dias)} día(s)`
+                      : s.dias === 0
+                        ? `Próximo mantenimiento: ${proxima} · es hoy`
+                        : `Próximo mantenimiento: ${proxima} · en ${s.dias} día(s)`
+                  return (
+                    <span className={`invima-venc invima-${s.estado}`} title={titulo}>
+                      {fecha}
+                    </span>
+                  )
+                })()}
+              </span>
+            </div>
             <Dato
               k="Requiere calibración"
               val={e.calibracion_si ? 'Sí' : e.calibracion_no ? 'No' : '—'}
@@ -376,7 +475,7 @@ function ResumenModal({
       </div>
 
       {verDocs && (
-        <div className="modal-overlay" onClick={() => setVerDocs(false)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setVerDocs(false))}>
           <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
             <div className="detail-head">
               <h3>
@@ -393,23 +492,14 @@ function ResumenModal({
             <DocumentosEquipo
               equipoId={e.id}
               puedeEditar={puedeEditar}
-              onDocumentosChanged={async () => {
-                const docs = await listarDocumentos(e.id)
-                setDocumentos(docs)
-                const añosUnicos = Array.from(
-                  new Set(docs.filter(d => d.año_documento).map((d) => d.año_documento!))
-                )
-                  .sort((a, b) => b - a)
-                  .slice(0, 3)
-                setAños(añosUnicos)
-              }}
+              onDocumentosChanged={recargarDocumentos}
             />
           </div>
         </div>
       )}
 
       {verMovimientos && (
-        <div className="modal-overlay" onClick={() => setVerMovimientos(false)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setVerMovimientos(false))}>
           <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
             <div className="detail-head">
               <h3>
@@ -432,7 +522,7 @@ function ResumenModal({
       )}
 
       {verMantenimiento && (
-        <div className="modal-overlay" onClick={() => setVerMantenimiento(false)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setVerMantenimiento(false))}>
           <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
             <div className="detail-head">
               <h3>
@@ -450,6 +540,7 @@ function ResumenModal({
               equipoId={e.id}
               equipoNombre={e.nombre}
               puedeEditar={puedeEditar}
+              onDocumentosChanged={recargarDocumentos}
             />
           </div>
         </div>
@@ -510,6 +601,26 @@ function DocumentosAñoModal({
     }
   }
 
+  async function descargar(doc: DocumentoEquipo) {
+    try {
+      const { descargarDocumentoNombre } = await import('./documentosApi')
+      await descargarDocumentoNombre(equipoId, doc.id, doc.nombre_archivo)
+    } catch {
+      alert('Error al descargar el documento')
+    }
+  }
+
+  async function eliminar(doc: DocumentoEquipo) {
+    if (!window.confirm(`¿Eliminar "${doc.nombre_archivo}"?`)) return
+    try {
+      const { eliminarDocumento } = await import('./documentosApi')
+      await eliminarDocumento(equipoId, doc.id)
+      setLocalDocs((prev) => prev.filter((d) => d.id !== doc.id))
+    } catch {
+      alert('Error al eliminar el documento')
+    }
+  }
+
   function cerrarVisualizacion() {
     if (urlBlobDoc) URL.revokeObjectURL(urlBlobDoc)
     setDocSeleccionado(null)
@@ -517,7 +628,7 @@ function DocumentosAñoModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(onCerrar)}>
       <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
         <div className="detail-head">
           <h3>Documentos - Año {año}</h3>
@@ -530,49 +641,19 @@ function DocumentosAñoModal({
           </button>
         </div>
         <div style={{ padding: '16px' }}>
-          {docsDelAño.length === 0 ? (
-            <p className="muted">No hay documentos para este año</p>
-          ) : (
-            <div style={{ display: 'grid', gap: '8px' }}>
-              {docsDelAño.map((doc) => (
-                <div
-                  key={doc.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px',
-                    background: 'var(--color-bg-secondary)',
-                    borderRadius: '6px',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>
-                      {doc.nombre_archivo}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                      {doc.usuario?.nombre} • {new Date(doc.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="icon-btn"
-                      title="Visualizar"
-                      onClick={() => visualizar(doc)}
-                    >
-                      <Eye size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <TablaDocumentos
+            documentos={docsDelAño}
+            puedeEditar={puedeEditar}
+            onVisualizar={visualizar}
+            onDescargar={descargar}
+            onEliminar={eliminar}
+            vacio="No hay documentos para este año"
+          />
         </div>
       </div>
 
       {docSeleccionado && urlBlobDoc && (
-        <div className="modal-overlay" onClick={cerrarVisualizacion}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(cerrarVisualizacion)}>
           <div className="modal card" style={{ maxWidth: '90%', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
             <div className="detail-head">
               <h3>{docSeleccionado.nombre_archivo}</h3>
@@ -649,6 +730,26 @@ function DocumentosDocumentacionModal({
     }
   }
 
+  async function descargar(doc: DocumentoEquipo) {
+    try {
+      const { descargarDocumentoNombre } = await import('./documentosApi')
+      await descargarDocumentoNombre(equipoId, doc.id, doc.nombre_archivo)
+    } catch {
+      alert('Error al descargar el documento')
+    }
+  }
+
+  async function eliminar(doc: DocumentoEquipo) {
+    if (!window.confirm(`¿Eliminar "${doc.nombre_archivo}"?`)) return
+    try {
+      const { eliminarDocumento } = await import('./documentosApi')
+      await eliminarDocumento(equipoId, doc.id)
+      setLocalDocs((prev) => prev.filter((d) => d.id !== doc.id))
+    } catch {
+      alert('Error al eliminar el documento')
+    }
+  }
+
   function cerrarVisualizacion() {
     if (urlBlobDoc) URL.revokeObjectURL(urlBlobDoc)
     setDocSeleccionado(null)
@@ -656,7 +757,7 @@ function DocumentosDocumentacionModal({
   }
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(onCerrar)}>
       <div className="modal card modal-ancho" onClick={(e) => e.stopPropagation()}>
         <div className="detail-head">
           <h3>Documentación del Equipo</h3>
@@ -669,49 +770,19 @@ function DocumentosDocumentacionModal({
           </button>
         </div>
         <div style={{ padding: '16px' }}>
-          {docsDocumentacion.length === 0 ? (
-            <p className="muted">No hay documentos en documentación</p>
-          ) : (
-            <div style={{ display: 'grid', gap: '8px' }}>
-              {docsDocumentacion.map((doc) => (
-                <div
-                  key={doc.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '12px',
-                    background: 'var(--color-bg-secondary)',
-                    borderRadius: '6px',
-                    border: '1px solid var(--color-border)',
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>
-                      {doc.nombre_archivo}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
-                      {doc.usuario?.nombre} • {new Date(doc.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="icon-btn"
-                      title="Visualizar"
-                      onClick={() => visualizar(doc)}
-                    >
-                      <Eye size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <TablaDocumentos
+            documentos={docsDocumentacion}
+            puedeEditar={puedeEditar}
+            onVisualizar={visualizar}
+            onDescargar={descargar}
+            onEliminar={eliminar}
+            vacio="No hay documentos en documentación"
+          />
         </div>
       </div>
 
       {docSeleccionado && urlBlobDoc && (
-        <div className="modal-overlay" onClick={cerrarVisualizacion}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(cerrarVisualizacion)}>
           <div className="modal card" style={{ maxWidth: '90%', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
             <div className="detail-head">
               <h3>{docSeleccionado.nombre_archivo}</h3>

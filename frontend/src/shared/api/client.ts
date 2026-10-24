@@ -15,12 +15,13 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Si el backend responde 401 (token vencido/ inválido), limpia la sesión local.
+// Si el backend responde 401 (token vencido/ inválido), limpia la sesión y redirige al login.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
       clearToken()
+      window.location.href = '/login'
     }
     return Promise.reject(error)
   },

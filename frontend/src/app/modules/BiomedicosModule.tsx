@@ -31,8 +31,8 @@ export function BiomedicosModule() {
   const verMant = puede('mantenimiento:ver')
   const items: NavItem[] = [
     { to: '', icono: Home, texto: 'Inicio', visible: true },
-    { to: 'inventario', icono: Boxes, texto: 'Inventario', visible: verInv },
     { to: 'equipos', icono: HeartPulse, texto: 'Equipos', visible: verInv },
+    { to: 'inventario', icono: Boxes, texto: 'Inventario', visible: verInv },
     { to: 'sedes', icono: Building2, texto: 'Sedes', visible: verInv },
     { to: 'servicios', icono: Store, texto: 'Servicios', visible: verInv },
     { to: 'proveedores', icono: Truck, texto: 'Proveedores', visible: verInv },

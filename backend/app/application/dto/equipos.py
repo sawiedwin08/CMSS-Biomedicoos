@@ -86,6 +86,7 @@ class DatosEquipo:
 
     # --- Mantenimiento / operación ---
     periodicidad_mantenimiento: str | None = None
+    fecha_ultimo_mantenimiento: date | None = None
     calibracion_si: bool = False
     calibracion_no: bool = False
     equipo_movil: bool = False

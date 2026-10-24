@@ -3,7 +3,8 @@ import { type FormEvent, useEffect, useState } from 'react'
 
 import type { Proveedor } from '../../entities/proveedor'
 import { useAuth } from '../../shared/auth/AuthContext'
-import { type Columna, DataTable } from '../../shared/ui/DataTable'
+import DataTable, { type Columna } from '../../shared/ui/DataTable'
+import { cerrarAlClicFuera } from '../../shared/ui/overlay'
 import {
   actualizarProveedor,
   crearProveedor,
@@ -59,44 +60,53 @@ export function ProveedoresPage() {
   if (cargando) return <div className="muted">Cargando proveedores…</div>
 
   const columnas: Columna<Proveedor>[] = [
-    { header: 'Nombre', celda: (p) => p.nombre },
-    { header: 'NIT', celda: (p) => p.nit || '—' },
-    { header: 'Contacto', celda: (p) => p.contacto || '—' },
-    { header: 'Teléfono', celda: (p) => p.telefono || '—' },
-    { header: 'Correo', celda: (p) => p.email || '—' },
+    { id: 'nombre', header: 'Nombre', accessorFn: (p) => p.nombre },
+    { id: 'nit', header: 'NIT', accessorFn: (p) => p.nit || '—' },
+    { id: 'contacto', header: 'Contacto', accessorFn: (p) => p.contacto || '—' },
+    { id: 'telefono', header: 'Teléfono', accessorFn: (p) => p.telefono || '—' },
+    { id: 'email', header: 'Correo', accessorFn: (p) => p.email || '—' },
     {
+      id: 'estado',
       header: 'Estado',
-      celda: (p) => (
-        <span className={p.activo ? 'estado-ok' : 'estado-off'}>
-          {p.activo ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      accessorFn: (p) => p.activo,
+      cell: ({ row }) => {
+        const p = row.original
+        return (
+          <span className={p.activo ? 'estado-ok' : 'estado-off'}>
+            {p.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        )
+      },
     },
     {
+      id: 'acciones',
       header: '',
-      ancho: 90,
-      celda: (p) => (
-        <>
-          {puedeEditar && (
-            <button
-              className="icon-btn"
-              title="Editar"
-              onClick={() => {
-                setError(null)
-                setMensaje(null)
-                setEditando(p)
-              }}
-            >
-              <Pencil size={16} />
-            </button>
-          )}
-          {puedeEliminar && (
-            <button className="icon-btn" title="Eliminar" onClick={() => borrar(p)}>
-              <Trash2 size={16} />
-            </button>
-          )}
-        </>
-      ),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const p = row.original
+        return (
+          <>
+            {puedeEditar && (
+              <button
+                className="icon-btn"
+                title="Editar"
+                onClick={() => {
+                  setError(null)
+                  setMensaje(null)
+                  setEditando(p)
+                }}
+              >
+                <Pencil size={16} />
+              </button>
+            )}
+            {puedeEliminar && (
+              <button className="icon-btn" title="Eliminar" onClick={() => borrar(p)}>
+                <Trash2 size={16} />
+              </button>
+            )}
+          </>
+        )
+      },
     },
   ]
 
@@ -116,21 +126,19 @@ export function ProveedoresPage() {
       )}
 
       <div className="card">
-        <h2>Proveedores</h2>
         {mensaje && <div className="alert-ok">{mensaje}</div>}
         {error && <div className="alert-error">{error}</div>}
 
         <DataTable
-          columnas={columnas}
-          filas={proveedores}
-          keyOf={(p) => p.id}
-          porPagina={15}
-          vacio="Aún no hay proveedores registrados."
+          columns={columnas}
+          data={proveedores}
+          title="Proveedores"
+          initialPageSize={15}
         />
       </div>
 
       {editando && (
-        <div className="modal-overlay" onClick={() => setEditando(null)}>
+        <div className="modal-overlay" onMouseDown={cerrarAlClicFuera(() => setEditando(null))}>
           <div className="modal card" onClick={(e) => e.stopPropagation()}>
             <ProveedorForm
               titulo="Editar proveedor"

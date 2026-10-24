@@ -13,9 +13,10 @@ from app.infrastructure.models.mixins import TimestampMixin
 
 class OrdenTrabajo(Base, TimestampMixin):
     __tablename__ = "ordenes_trabajo"
+    __table_args__ = {"schema": "biomedicos"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    equipo_id: Mapped[int] = mapped_column(ForeignKey("equipos.id"), index=True)
+    equipo_id: Mapped[int] = mapped_column(ForeignKey("biomedicos.equipos.id"), index=True)
 
     tipo: Mapped[TipoMantenimiento] = mapped_column(
         pg_enum(TipoMantenimiento, "tipo_mantenimiento"),

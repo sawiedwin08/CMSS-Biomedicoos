@@ -8,6 +8,7 @@ from app.infrastructure.models.mixins import TimestampMixin
 
 class Sede(Base, TimestampMixin):
     __tablename__ = "sedes"
+    __table_args__ = {"schema": "comun"}
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nombre: Mapped[str] = mapped_column(String(150), unique=True, index=True)

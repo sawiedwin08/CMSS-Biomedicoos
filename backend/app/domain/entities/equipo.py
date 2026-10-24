@@ -86,6 +86,7 @@ class Equipo:
 
     # --- Mantenimiento / operación ---
     periodicidad_mantenimiento: str | None = None
+    fecha_ultimo_mantenimiento: date | None = None
     calibracion_si: bool = False
     calibracion_no: bool = False
     equipo_movil: bool = False
@@ -100,3 +101,6 @@ class Equipo:
     sede_nombre: str | None = None
     servicio_nombre: str | None = None
     proveedor_nombre: str | None = None
+    # Último mantenimiento efectivo (solo lectura): el manual si existe, si no la
+    # fecha de cierre de la última OT completada. Lo calcula el repositorio.
+    ultimo_mantenimiento_efectivo: date | None = None

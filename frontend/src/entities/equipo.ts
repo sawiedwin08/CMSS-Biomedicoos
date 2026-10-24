@@ -76,6 +76,7 @@ export interface Equipo {
   fecha_vencimiento_invima: string | null
   // Mantenimiento / operación
   periodicidad_mantenimiento: string | null
+  fecha_ultimo_mantenimiento: string | null
   calibracion_si: boolean
   calibracion_no: boolean
   equipo_movil: boolean
@@ -88,6 +89,8 @@ export interface Equipo {
   sede_nombre: string | null
   servicio_nombre: string | null
   proveedor_nombre: string | null
+  // Último mantenimiento efectivo (manual o derivado de la última OT completada)
+  ultimo_mantenimiento_efectivo: string | null
 }
 
 export const ESTADOS: { value: EstadoEquipo; label: string }[] = [
@@ -176,4 +179,60 @@ export function etiquetaPropiedad(v: Propiedad | null): string {
 
 export function etiquetaEstado(v: EstadoEquipo): string {
   return ESTADOS.find((e) => e.value === v)?.label ?? v
+}
+
+export type SemaforoVencimiento = 'rojo' | 'amarillo' | 'verde'
+
+/**
+ * Semáforo de vencimiento según días restantes hasta una fecha (INVIMA, garantía, etc.):
+ *  - rojo:     ≤ 8 días (o ya vencido)  → límite / crítico
+ *  - amarillo: 9 a 30 días              → próximo a vencer
+ *  - verde:    > 30 días                → vigente
+ * Devuelve null si no hay fecha o es inválida.
+ */
+export function semaforoVencimiento(
+  fecha: string | null,
+): { estado: SemaforoVencimiento; dias: number } | null {
+  if (!fecha) return null
+  const partes = fecha.slice(0, 10).split('-').map(Number)
+  if (partes.length !== 3 || partes.some(Number.isNaN)) return null
+  const [y, m, d] = partes
+  const venc = new Date(y, m - 1, d)
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+  const dias = Math.round((venc.getTime() - hoy.getTime()) / 86_400_000)
+  const estado: SemaforoVencimiento = dias <= 8 ? 'rojo' : dias <= 30 ? 'amarillo' : 'verde'
+  return { estado, dias }
+}
+
+// Meses/días que suma cada periodicidad para calcular el próximo mantenimiento.
+const PERIODO_MESES: Record<string, number> = {
+  mensual: 1,
+  trimestral: 3,
+  semestral: 6,
+  anual: 12,
+}
+const PERIODO_DIAS: Record<string, number> = { semanal: 7, quincenal: 15 }
+
+/**
+ * Fecha del próximo mantenimiento = último mantenimiento + periodicidad.
+ * Devuelve null si falta alguno, o si la periodicidad es 'no_aplica'/desconocida.
+ */
+export function proximoMantenimiento(
+  ultimo: string | null,
+  periodicidad: string | null,
+): string | null {
+  if (!ultimo || !periodicidad) return null
+  // Normaliza a minúsculas y sin espacios para tolerar valores antiguos ("Semestral", "No Aplica").
+  const per = periodicidad.trim().toLowerCase().replace(/\s+/g, '_')
+  if (!per || per === 'no_aplica') return null
+  const partes = ultimo.slice(0, 10).split('-').map(Number)
+  if (partes.length !== 3 || partes.some(Number.isNaN)) return null
+  const [y, m, d] = partes
+  const fecha = new Date(y, m - 1, d)
+  if (per in PERIODO_MESES) fecha.setMonth(fecha.getMonth() + PERIODO_MESES[per])
+  else if (per in PERIODO_DIAS) fecha.setDate(fecha.getDate() + PERIODO_DIAS[per])
+  else return null
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${fecha.getFullYear()}-${p(fecha.getMonth() + 1)}-${p(fecha.getDate())}`
 }

@@ -45,6 +45,39 @@ h1 {
   box-shadow: 0 6px 24px rgba(20, 40, 70, 0.06);
 }
 
+/* ---------- Menú de acciones (⋯) ---------- */
+.menu-acciones {
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(20, 40, 70, 0.18);
+  padding: 6px;
+  min-width: 232px;
+}
+.menu-accion-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--texto);
+}
+.menu-accion-item:hover {
+  background: var(--fondo);
+}
+.menu-accion-item.peligro {
+  color: var(--error-tx);
+}
+.menu-accion-item.peligro:hover {
+  background: var(--error-bg);
+}
+
 /* ---------- Login ---------- */
 .login-wrap {
   min-height: 100vh;
@@ -96,6 +129,325 @@ h1 {
   border-color: var(--azul);
 }
 
+/* Campo con error de validación (ej. serial duplicado) */
+.field input.input-error {
+  border-color: var(--error-tx);
+  background: var(--error-bg);
+}
+
+.field input.input-error:focus {
+  border-color: var(--error-tx);
+}
+
+.field-error {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: var(--error-tx);
+  font-weight: 600;
+}
+
+/* ===================== Dashboard (Inicio) ===================== */
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+.dash-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+}
+.dash-kpi-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.dash-kpi-num {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--texto);
+}
+.dash-kpi-lbl {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.dash-graficos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.dash-alertas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+/* Evita que los gráficos de Recharts ensanchen su columna: las celdas 1fr
+   quedan parejas y los gráficos se ajustan al ancho de su tarjeta. */
+.dash-graficos > *,
+.dash-alertas > * {
+  min-width: 0;
+}
+@media (max-width: 860px) {
+  .dash-graficos,
+  .dash-alertas {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-tit {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--texto);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-contador {
+  background: var(--error-bg);
+  color: var(--error-tx);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.dash-chart {
+  position: relative;
+}
+.dash-dona-centro {
+  position: absolute;
+  top: calc(50% - 14px);
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.dash-dona-num {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--texto);
+  line-height: 1;
+}
+.dash-dona-lbl {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.dash-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dash-lista li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 4px;
+  border-top: 1px solid var(--borde);
+  font-size: 0.85rem;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.dash-lista li:first-child {
+  border-top: none;
+}
+.dash-lista li:hover {
+  background: #f5f8fb;
+}
+.dash-lista-nom {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--texto);
+}
+.dash-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dash-dot-rojo {
+  background: #d03b3b;
+}
+.dash-dot-amarillo {
+  background: #fab219;
+}
+.dash-alerta-ico {
+  display: inline-flex;
+  color: var(--muted);
+}
+.dash-lista-mas {
+  display: block !important;
+  border-top: 1px solid var(--borde);
+  padding-top: 8px;
+}
+
+/* Equipos a mantener (módulo Mantenimiento) */
+.em-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+.em-enproceso {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: #eaf3fb;
+  color: var(--azul);
+  border: 1px solid #c7defa;
+  white-space: nowrap;
+}
+.em-bulk {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #eaf3fb;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+/* Pestañas (tabs) */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--borde);
+  margin-bottom: 16px;
+}
+.tab {
+  padding: 9px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tab:hover {
+  color: var(--texto);
+}
+.tab.activo {
+  color: var(--azul);
+  border-bottom-color: var(--azul);
+}
+
+/* Tabla reutilizable de documentos */
+.docs-tabla-container {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.docs-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.docs-tabla thead {
+  background: var(--fondo);
+}
+.docs-tabla th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+.docs-tabla td {
+  padding: 10px 12px;
+  border-top: 1px solid var(--borde);
+  color: var(--texto);
+  vertical-align: middle;
+}
+.docs-tabla tbody tr:hover {
+  background: #f5f8fb;
+}
+.docs-tipo-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.docs-tipo-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.docs-nombre-col {
+  font-weight: 500;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.docs-anio-col {
+  text-align: center;
+  color: var(--muted);
+}
+.docs-usuario-col {
+  color: var(--muted);
+}
+.docs-acciones-col {
+  text-align: right;
+  white-space: nowrap;
+}
+.docs-acciones-col .icon-btn {
+  margin-left: 4px;
+}
+
+/* Semáforo de vencimiento INVIMA (tabla de inventario) */
+.invima-venc {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.invima-rojo {
+  background: #fdecec;
+  color: #b42318;
+  border: 1px solid #f1aeb5;
+}
+
+.invima-amarillo {
+  background: #fff7e6;
+  color: #9a5b00;
+  border: 1px solid #f5d08a;
+}
+
+.invima-verde {
+  background: #e6f4ea;
+  color: #0f7a35;
+  border: 1px solid #a6d9b8;
+}
+
 .btn-primary {
   padding: 11px 14px;
   background: var(--azul);
@@ -139,6 +491,12 @@ h1 {
   display: flex;
   flex-direction: column;
   padding: 16px 12px;
+  /* Menú fijo: no se desplaza al hacer scroll y mantiene su alto. */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .sidebar-brand {
@@ -219,6 +577,10 @@ h1 {
     gap: 8px;
     overflow-x: auto;
     padding: 8px 10px;
+    /* En móvil es una barra horizontal arriba, no de alto completo. */
+    height: auto;
+    top: 0;
+    z-index: 5;
   }
   .sidebar-brand {
     border: none;
@@ -266,6 +628,9 @@ h1 {
   flex: 1;
   min-width: 0;
   padding: 24px 28px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .datos {
@@ -944,6 +1309,15 @@ h1 {
   display: none !important;
 }
 
+/* Modo exportar a PDF (captura): muestra los valores y oculta los controles,
+   igual que la impresión, pero activado por clase para html2canvas. */
+.hr-doc.hr-exportando .print-only {
+  display: block !important;
+}
+.hr-doc.hr-exportando .no-print {
+  display: none !important;
+}
+
 @media print {
   .print-only {
     display: block !important;
@@ -1169,24 +1543,267 @@ h1 {
 }
 
 /* ---------- Paginación de tablas ---------- */
+/* ===================== DataTable (TanStack) ===================== */
+.dt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dt-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.dt-toolbar-selected {
+  background: #eaf3fb;
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.dt-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dt-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.dt-selected-count {
+  font-weight: 600;
+  color: var(--azul);
+}
+
+.dt-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dt-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #fff;
+}
+
+.dt-search input {
+  border: none;
+  outline: none;
+  font-size: 0.9rem;
+  background: transparent;
+  color: var(--texto);
+}
+
+.dt-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.dt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.dt-table th,
+.dt-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--borde);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.dt-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--fondo-alt, #f6f8fa);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  user-select: none;
+  border-bottom: 2px solid var(--borde);
+}
+
+/* Filas alternadas (zebra) + hover uniforme en toda la tabla. */
+.dt-table tbody tr:nth-child(even) td {
+  background: var(--fondo-alt, #f9fafb);
+}
+.dt-table tbody tr:hover td {
+  background: #f0f5fb;
+}
+
+/* Alineación por columna (vía meta.align). */
+.dt-al-left {
+  text-align: left;
+}
+.dt-al-center {
+  text-align: center;
+}
+.dt-al-right {
+  text-align: right;
+}
+.dt-al-center .dt-th-inner {
+  justify-content: center;
+}
+.dt-al-right .dt-th-inner {
+  justify-content: flex-end;
+}
+
+/* Tipografía tabular para códigos, seriales y fechas. */
+.dt-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  letter-spacing: 0.2px;
+}
+
+/* Truncado con "…" en una sola línea. */
+.dt-truncate {
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Columna congelada a la derecha (Acciones siempre visibles). */
+.dt-table th.dt-sticky-right,
+.dt-table td.dt-sticky-right {
+  position: sticky;
+  right: 0;
+  /* Sombra sutil que indica que hay más contenido a la izquierda al hacer scroll. */
+  box-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.18);
+}
+/* Fondo opaco para que no se transparente el contenido al desplazar. */
+.dt-table tbody tr td.dt-sticky-right {
+  background: var(--fondo, #ffffff);
+  z-index: 2;
+}
+.dt-table tbody tr:nth-child(even) td.dt-sticky-right {
+  background: var(--fondo-alt, #f9fafb);
+}
+.dt-table tbody tr:hover td.dt-sticky-right {
+  background: #f0f5fb;
+}
+.dt-table thead th.dt-sticky-right {
+  background: var(--fondo-alt, #f6f8fa);
+  z-index: 3; /* por encima de la cabecera sticky-top y de las celdas sticky-right */
+}
+
+.dt-table.dt-dense th,
+.dt-table.dt-dense td {
+  padding: 6px 10px;
+  font-size: 0.82rem;
+}
+
+.dt-sortable {
+  cursor: pointer;
+}
+
+.dt-sortable:hover {
+  color: var(--azul);
+}
+
+.dt-th-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dt-sort-icon {
+  display: inline-flex;
+}
+
+.dt-sort-idle {
+  opacity: 0.35;
+}
+
+.dt-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px 12px;
+}
+
+.dt-row-selected td {
+  background: #eaf3fb;
+}
+
+.dt-row-click {
+  cursor: pointer;
+}
+
+.dt-row-click:hover td {
+  background: #f5f8fb;
+}
+
 .dt-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 4px;
 }
 
-.dt-pager {
+.dt-dense-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.dt-pagination {
   display: flex;
   align-items: center;
   gap: 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
-.dt-pager button:disabled {
-  opacity: 0.5;
+.dt-pagination select {
+  padding: 4px 6px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.dt-pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  color: var(--texto);
+}
+
+.dt-pagination button:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
+}
+
+.dt-page-num {
+  min-width: 56px;
+  text-align: center;
 }
 
 /* ---------- Formulario amplio (modal Inventario) ---------- */
