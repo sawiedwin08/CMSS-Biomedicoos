@@ -47,6 +47,8 @@ class Activo(Base, TimestampMixin):
     asignado_a_usuario_id: Mapped[int | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL"), index=True
     )
+    # Nombre libre del responsable (no necesariamente un usuario del sistema).
+    asignado_a_nombre: Mapped[str | None] = mapped_column(String(150))
     fecha_asignacion: Mapped[date | None] = mapped_column(Date)
 
     # --- Adquisición y garantía ---

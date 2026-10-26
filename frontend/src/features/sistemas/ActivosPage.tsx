@@ -12,7 +12,7 @@ import {
   Upload,
   Wrench,
 } from 'lucide-react'
-import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
 
 import {
   type Activo,
@@ -79,9 +79,9 @@ function detalleError(err: unknown, porDefecto: string): string {
 const CATEGORIAS: CategoriaActivo[] = ['computo', 'red', 'periferico']
 const ESTADOS: EstadoActivo[] = [
   'operativo',
-  'asignado',
   'en_bodega',
   'en_reparacion',
+  'baja',
 ]
 
 export function ActivosPage() {
@@ -154,11 +154,6 @@ export function ActivosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vistaBajas, texto, fCategoria, fEstado])
 
-  const nombreUsuario = useMemo(() => {
-    const mapa = new Map(usuarios.map((u) => [u.id, u.nombre]))
-    return (id: number | null) => (id ? mapa.get(id) ?? `#${id}` : '—')
-  }, [usuarios])
-
   async function borrar(a: Activo) {
     if (!window.confirm(`¿Eliminar definitivamente el activo "${a.codigo_interno}"?`)) return
     setError(null)
@@ -225,7 +220,7 @@ export function ActivosPage() {
           { id: 'fecha_baja', header: 'Fecha de baja', accessorFn: (a: Activo) => a.fecha_baja || '—' },
         ]
       : [
-          { id: 'asignado', header: 'Asignado a', accessorFn: (a: Activo) => nombreUsuario(a.asignado_a_usuario_id) },
+          { id: 'asignado', header: 'Asignado a', accessorFn: (a: Activo) => a.asignado_a_nombre || '—' },
         ]),
     {
       id: 'acciones',
@@ -477,7 +472,6 @@ export function ActivosPage() {
           <div className="modal card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 860 }}>
             <ActaAsignacionModal
               activo={actaDe}
-              usuarios={usuarios}
               areas={areas}
               onError={setError}
               onGuardado={() => {
@@ -780,7 +774,7 @@ function MovimientosModal({
   const [form, setForm] = useState<DatosMovimiento>({
     sede_destino_id: activo.sede_id,
     area_destino_id: activo.area_id,
-    usuario_destino_id: activo.asignado_a_usuario_id,
+    usuario_destino_nombre: activo.asignado_a_nombre,
     motivo: '',
     responsable: '',
   })
@@ -863,22 +857,19 @@ function MovimientosModal({
             </label>
             <label className="field">
               <span>Asignar a</span>
-              <select
-                value={form.usuario_destino_id ?? ''}
+              <input
+                list="lista-asignados-mov"
+                value={form.usuario_destino_nombre ?? ''}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    usuario_destino_id: e.target.value ? Number(e.target.value) : null,
-                  }))
+                  setForm((f) => ({ ...f, usuario_destino_nombre: e.target.value }))
                 }
-              >
-                <option value="">—</option>
+                placeholder="Escriba el nombre del responsable"
+              />
+              <datalist id="lista-asignados-mov">
                 {usuarios.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nombre}
-                  </option>
+                  <option key={u.id} value={u.nombre} />
                 ))}
-              </select>
+              </datalist>
             </label>
             <label className="field">
               <span>Motivo</span>
@@ -957,20 +948,18 @@ const ACCESORIOS_BASE = [
 
 function ActaAsignacionModal({
   activo,
-  usuarios,
   areas,
   onError,
   onGuardado,
   onCerrar,
 }: {
   activo: Activo
-  usuarios: Opcion[]
   areas: Opcion[]
   onError: (msg: string) => void
   onGuardado: () => void
   onCerrar: () => void
 }) {
-  const asignado = usuarios.find((u) => u.id === activo.asignado_a_usuario_id)?.nombre ?? ''
+  const asignado = activo.asignado_a_nombre ?? ''
   const dependencia = areas.find((a) => a.id === activo.area_id)?.nombre ?? ''
 
   const [form, setForm] = useState<ActaAsignacionDatos>({
@@ -1216,6 +1205,7 @@ function vacio(): DatosActivo {
     area_id: null,
     piso: null,
     asignado_a_usuario_id: null,
+    asignado_a_nombre: null,
     fecha_asignacion: null,
     fecha_adquisicion: null,
     proveedor_id: null,
@@ -1301,8 +1291,17 @@ function ActivoForm({
     e.preventDefault()
     setGuardando(true)
     try {
+      // El campo "Nombre" ya no se captura: se deriva de marca/modelo (o la
+      // categoría) cuando está vacío, y se conserva el existente al editar.
+      const nombre =
+        form.nombre?.trim() ||
+        [form.marca, form.modelo].filter(Boolean).join(' ').trim() ||
+        ETIQUETA_CATEGORIA[form.categoria]
       const payload = Object.fromEntries(
-        Object.entries(form).map(([k, v]) => [k, !mantenerString.has(k) && v === '' ? null : v]),
+        Object.entries({ ...form, nombre }).map(([k, v]) => [
+          k,
+          !mantenerString.has(k) && v === '' ? null : v,
+        ]),
       ) as DatosActivo
       await onGuardar(payload)
     } catch (err) {
@@ -1343,10 +1342,6 @@ function ActivoForm({
             onChange={(e) => set('codigo_interno', e.target.value)}
             placeholder="Automático (SIS-0001) si se deja vacío"
           />
-        </label>
-        <label className="field">
-          <span>Nombre *</span>
-          <input value={form.nombre} onChange={(e) => set('nombre', e.target.value)} required />
         </label>
         <label className="field">
           <span>Estado</span>
@@ -1415,19 +1410,17 @@ function ActivoForm({
         </label>
         <label className="field">
           <span>Asignado a</span>
-          <select
-            value={form.asignado_a_usuario_id ?? ''}
-            onChange={(e) =>
-              set('asignado_a_usuario_id', e.target.value ? Number(e.target.value) : null)
-            }
-          >
-            <option value="">—</option>
+          <input
+            list="lista-asignados"
+            value={form.asignado_a_nombre ?? ''}
+            onChange={(e) => set('asignado_a_nombre', e.target.value)}
+            placeholder="Escriba el nombre del responsable"
+          />
+          <datalist id="lista-asignados">
             {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre}
-              </option>
+              <option key={u.id} value={u.nombre} />
             ))}
-          </select>
+          </datalist>
         </label>
       </div>
 
@@ -1459,10 +1452,6 @@ function ActivoForm({
             <label className="field">
               <span>RAM (capacidad)</span>
               <input value={form.ram_capacidad ?? ''} onChange={(e) => set('ram_capacidad', e.target.value)} />
-            </label>
-            <label className="field">
-              <span>RAM (tipo)</span>
-              <input value={form.ram_tipo ?? ''} onChange={(e) => set('ram_tipo', e.target.value)} placeholder="DDR4…" />
             </label>
             <label className="field">
               <span>Disco (tipo)</span>
