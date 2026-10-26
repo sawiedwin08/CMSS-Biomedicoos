@@ -9,7 +9,7 @@ class MovimientoActivoCreate(BaseModel):
 
     sede_destino_id: int | None = None
     area_destino_id: int | None = None
-    usuario_destino_id: int | None = None
+    usuario_destino_nombre: str | None = Field(default=None, max_length=150)
     motivo: str | None = Field(default=None, max_length=250)
     responsable: str | None = Field(default=None, max_length=150)
 

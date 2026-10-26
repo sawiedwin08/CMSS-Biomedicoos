@@ -173,7 +173,7 @@ export interface MovimientoActivo {
 export interface DatosMovimiento {
   sede_destino_id: number | null
   area_destino_id: number | null
-  usuario_destino_id: number | null
+  usuario_destino_nombre: string | null
   motivo?: string | null
   responsable?: string | null
 }

@@ -16,8 +16,8 @@ class MovimientoActivoRepositorySQLAlchemy:
         area_origen_id: int | None,
         sede_destino_id: int | None,
         area_destino_id: int | None,
-        usuario_origen_id: int | None,
-        usuario_destino_id: int | None,
+        usuario_origen_nombre: str | None,
+        usuario_destino_nombre: str | None,
         motivo: str | None = None,
         responsable: str | None = None,
     ) -> MovimientoActivo:
@@ -27,8 +27,8 @@ class MovimientoActivoRepositorySQLAlchemy:
             area_origen_id=area_origen_id,
             sede_destino_id=sede_destino_id,
             area_destino_id=area_destino_id,
-            usuario_origen_id=usuario_origen_id,
-            usuario_destino_id=usuario_destino_id,
+            usuario_origen_nombre=usuario_origen_nombre,
+            usuario_destino_nombre=usuario_destino_nombre,
             motivo=motivo,
             responsable=responsable,
         )

@@ -423,8 +423,9 @@ def _enriquecer_mov(mov, sede_map, area_map, user_map) -> MovimientoActivoRead:
     r.area_origen_nombre = area_map.get(mov.area_origen_id)
     r.sede_destino_nombre = sede_map.get(mov.sede_destino_id)
     r.area_destino_nombre = area_map.get(mov.area_destino_id)
-    r.usuario_origen_nombre = user_map.get(mov.usuario_origen_id)
-    r.usuario_destino_nombre = user_map.get(mov.usuario_destino_id)
+    # El responsable se guarda como texto; para registros antiguos se resuelve por id.
+    r.usuario_origen_nombre = mov.usuario_origen_nombre or user_map.get(mov.usuario_origen_id)
+    r.usuario_destino_nombre = mov.usuario_destino_nombre or user_map.get(mov.usuario_destino_id)
     return r
 
 
@@ -451,24 +452,23 @@ def registrar_movimiento(
         raise HTTPException(status_code=400, detail="La sede destino no existe.")
     if datos.area_destino_id and areas.obtener_por_id(datos.area_destino_id) is None:
         raise HTTPException(status_code=400, detail="El área destino no existe.")
-    if datos.usuario_destino_id and usuarios.obtener_por_id(datos.usuario_destino_id) is None:
-        raise HTTPException(status_code=400, detail="El usuario destino no existe.")
 
+    destino_nombre = (datos.usuario_destino_nombre or "").strip() or None
     mov = movimientos.registrar_movimiento(
         activo_id=activo_id,
         sede_origen_id=activo.sede_id,
         area_origen_id=activo.area_id,
         sede_destino_id=datos.sede_destino_id,
         area_destino_id=datos.area_destino_id,
-        usuario_origen_id=activo.asignado_a_usuario_id,
-        usuario_destino_id=datos.usuario_destino_id,
+        usuario_origen_nombre=activo.asignado_a_nombre,
+        usuario_destino_nombre=destino_nombre,
         motivo=datos.motivo,
         responsable=datos.responsable,
     )
     # Actualiza la ubicación/asignación actual del activo.
     activo.sede_id = datos.sede_destino_id
     activo.area_id = datos.area_destino_id
-    activo.asignado_a_usuario_id = datos.usuario_destino_id
+    activo.asignado_a_nombre = destino_nombre
     activos.actualizar(activo_id, activo)
 
     sede_map, area_map, user_map = _mapas_nombres(sedes, areas, usuarios)

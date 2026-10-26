@@ -38,14 +38,21 @@ export function MantenimientosPage() {
 
   const filtrados = useMemo(
     () =>
-      items.filter(
-        (m) =>
-          (!fTipo || m.tipo === fTipo) &&
-          (!texto ||
-            `${m.activo_codigo} ${m.activo_nombre} ${m.responsable ?? ''} ${m.descripcion ?? ''}`
-              .toLowerCase()
-              .includes(texto.toLowerCase())),
-      ),
+      items.filter((m) => {
+        if (fTipo && m.tipo !== fTipo) return false
+        if (!texto) return true
+        const q = texto.trim().toLowerCase()
+        // Busca en todas las columnas visibles (incluye tipo y fecha).
+        const campos = [
+          m.activo_codigo,
+          m.activo_nombre,
+          m.responsable,
+          m.descripcion,
+          ETIQUETA_TIPO_MANT[m.tipo],
+          m.fecha,
+        ]
+        return campos.some((c) => (c ?? '').toLowerCase().includes(q))
+      }),
     [items, fTipo, texto],
   )
 
@@ -101,12 +108,20 @@ export function MantenimientosPage() {
         {error && <div className="alert-error">{error}</div>}
         {cargando ? (
           <div className="muted">Cargando…</div>
-        ) : filtrados.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="muted">
             Sin mantenimientos. Regístralos desde el Inventario (icono 🔧 en cada activo).
           </div>
+        ) : filtrados.length === 0 ? (
+          <div className="muted">No hay mantenimientos que coincidan con la búsqueda.</div>
         ) : (
-          <DataTable columns={columnas} data={filtrados} title="Mantenimientos" initialPageSize={15} />
+          <DataTable
+            columns={columnas}
+            data={filtrados}
+            title="Mantenimientos"
+            initialPageSize={15}
+            enableSearch={false}
+          />
         )}
         {verUrl && (
           <VisorPdfModal url={verUrl} titulo="Hoja de Vida" onCerrar={() => setVerUrl(null)} />

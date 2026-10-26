@@ -46,6 +46,7 @@ export interface Activo {
   area_id: number | null
   piso: string | null
   asignado_a_usuario_id: number | null
+  asignado_a_nombre: string | null
   fecha_asignacion: string | null
   fecha_adquisicion: string | null
   proveedor_id: number | null

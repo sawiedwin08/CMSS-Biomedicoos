@@ -29,6 +29,7 @@ class DatosActivo:
     area_id: int | None = None
     piso: str | None = None
     asignado_a_usuario_id: int | None = None
+    asignado_a_nombre: str | None = None
     fecha_asignacion: date | None = None
     fecha_adquisicion: date | None = None
     proveedor_id: int | None = None

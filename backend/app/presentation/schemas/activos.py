@@ -28,6 +28,7 @@ class ActivoBase(BaseModel):
     area_id: int | None = None
     piso: str | None = Field(default=None, max_length=50)
     asignado_a_usuario_id: int | None = None
+    asignado_a_nombre: str | None = Field(default=None, max_length=150)
     fecha_asignacion: date | None = None
     fecha_adquisicion: date | None = None
     proveedor_id: int | None = None

@@ -26,6 +26,9 @@ class MovimientoActivo(Base):
     area_destino_id: Mapped[int | None] = mapped_column(ForeignKey("comun.servicios.id"))
     usuario_origen_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
     usuario_destino_id: Mapped[int | None] = mapped_column(ForeignKey("usuarios.id"))
+    # Nombre libre del responsable (no necesariamente un usuario del sistema).
+    usuario_origen_nombre: Mapped[str | None] = mapped_column(String(150))
+    usuario_destino_nombre: Mapped[str | None] = mapped_column(String(150))
 
     motivo: Mapped[str | None] = mapped_column(String(250))
     responsable: Mapped[str | None] = mapped_column(String(150))
