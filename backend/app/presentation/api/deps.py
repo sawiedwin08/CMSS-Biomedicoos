@@ -19,6 +19,7 @@ from app.domain.repositories.equipo_repository import EquipoRepository
 from app.domain.repositories.modulo_repository import ModuloRepository
 from app.domain.repositories.permiso_repository import PermisoRepository
 from app.domain.repositories.proveedor_repository import ProveedorRepository
+from app.domain.repositories.representante_repository import RepresentanteRepository
 from app.domain.repositories.rol_repository import RolRepository
 from app.domain.repositories.sede_repository import SedeRepository
 from app.domain.repositories.servicio_repository import ServicioRepository
@@ -59,6 +60,9 @@ from app.infrastructure.repositories.permiso_repository_sqlalchemy import (
 )
 from app.infrastructure.repositories.proveedor_repository_sqlalchemy import (
     ProveedorRepositorySQLAlchemy,
+)
+from app.infrastructure.repositories.representante_repository_sqlalchemy import (
+    RepresentanteRepositorySQLAlchemy,
 )
 from app.infrastructure.repositories.rol_repository_sqlalchemy import (
     RolRepositorySQLAlchemy,
@@ -114,6 +118,10 @@ def get_servicio_repository(db: DbSession) -> ServicioRepository:
 
 def get_proveedor_repository(db: DbSession) -> ProveedorRepository:
     return ProveedorRepositorySQLAlchemy(db)
+
+
+def get_representante_repository(db: DbSession) -> RepresentanteRepository:
+    return RepresentanteRepositorySQLAlchemy(db)
 
 
 def get_equipo_repository(db: DbSession) -> EquipoRepository:
@@ -187,6 +195,9 @@ PermisoRepo = Annotated[PermisoRepository, Depends(get_permiso_repository)]
 SedeRepo = Annotated[SedeRepository, Depends(get_sede_repository)]
 ServicioRepo = Annotated[ServicioRepository, Depends(get_servicio_repository)]
 ProveedorRepo = Annotated[ProveedorRepository, Depends(get_proveedor_repository)]
+RepresentanteRepo = Annotated[
+    RepresentanteRepository, Depends(get_representante_repository)
+]
 EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
 ActivoRepo = Annotated[ActivoRepository, Depends(get_activo_repository)]
 DocumentoActivoRepo = Annotated[

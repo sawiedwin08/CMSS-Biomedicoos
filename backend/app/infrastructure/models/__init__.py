@@ -24,6 +24,7 @@ from app.infrastructure.models.ticket import Ticket
 from app.infrastructure.models.ticket_adjunto import TicketAdjunto
 from app.infrastructure.models.ticket_comentario import TicketComentario
 from app.infrastructure.models.proveedor import Proveedor
+from app.infrastructure.models.representante import Representante
 from app.infrastructure.models.rol import RolModel
 from app.infrastructure.models.sede import Sede
 from app.infrastructure.models.servicio import Servicio
@@ -51,6 +52,7 @@ __all__ = [
     "TicketAdjunto",
     "TicketComentario",
     "Proveedor",
+    "Representante",
     "RolModel",
     "Sede",
     "Servicio",

@@ -16,7 +16,7 @@ import {
   semaforoVencimiento,
   TECNOLOGIAS,
 } from '../../entities/equipo'
-import type { Proveedor } from '../../entities/proveedor'
+import type { Representante } from '../../entities/representante'
 import type { Sede } from '../../entities/sede'
 import type { Servicio } from '../../entities/servicio'
 import { useAuth } from '../../shared/auth/AuthContext'
@@ -39,7 +39,7 @@ import {
   type ResultadoImportacion,
   subirFotoEquipo,
 } from './equiposApi'
-import { listarProveedores } from './proveedoresApi'
+import { listarRepresentantes } from './representantesApi'
 import { listarSedes } from './sedesApi'
 import { listarServicios } from './serviciosApi'
 
@@ -59,7 +59,7 @@ export function InventarioPage() {
   const [equipos, setEquipos] = useState<Equipo[]>([])
   const [sedes, setSedes] = useState<Sede[]>([])
   const [servicios, setServicios] = useState<Servicio[]>([])
-  const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [representantes, setRepresentantes] = useState<Representante[]>([])
   const [filtros, setFiltros] = useState<FiltroEquipos>({})
   const [texto, setTexto] = useState('')
   const [cargando, setCargando] = useState(true)
@@ -75,16 +75,16 @@ export function InventarioPage() {
   useEffect(() => {
     ;(async () => {
       try {
-        const [eq, sd, sv, pr] = await Promise.all([
+        const [eq, sd, sv, rp] = await Promise.all([
           listarEquipos(),
           listarSedes(),
           listarServicios(),
-          listarProveedores(),
+          listarRepresentantes(),
         ])
         setEquipos(eq)
         setSedes(sd)
         setServicios(sv)
-        setProveedores(pr)
+        setRepresentantes(rp)
       } catch (err) {
         setError(detalleError(err, 'No se pudo cargar el inventario.'))
       } finally {
@@ -354,7 +354,7 @@ export function InventarioPage() {
               inicial={editando === 'nuevo' ? undefined : editando}
               sedes={sedes}
               servicios={servicios}
-              proveedores={proveedores}
+              representantes={representantes}
               onGuardar={(datos) =>
                 editando === 'nuevo'
                   ? crearEquipo(datos)
@@ -591,7 +591,7 @@ function EquipoForm({
   inicial,
   sedes,
   servicios,
-  proveedores,
+  representantes,
   onGuardar,
   onFinalizado,
   onError,
@@ -600,7 +600,7 @@ function EquipoForm({
   inicial?: Equipo
   sedes: Sede[]
   servicios: Servicio[]
-  proveedores: Proveedor[]
+  representantes: Representante[]
   onGuardar: (datos: DatosEquipo) => Promise<Equipo>
   onFinalizado: (mensaje: string) => Promise<void> | void
   onError: (msg: string) => void
@@ -953,6 +953,33 @@ function EquipoForm({
 
       <h4 className="grupo-tit">Representante</h4>
       <div className="form-grid">
+        <label className="field">
+          <span>Elegir representante</span>
+          <select
+            value=""
+            onChange={(e) => {
+              const r = representantes.find((x) => x.id === Number(e.target.value))
+              if (!r) return
+              // Autocompleta los campos (siguen siendo editables).
+              setF((prev) => ({
+                ...prev,
+                representante: r.nombre,
+                pais_representante: r.pais,
+                ciudad_representante: r.ciudad,
+                direccion_representante: r.direccion,
+                telefono_representante: r.telefono,
+                correo_representante: r.correo,
+              }))
+            }}
+          >
+            <option value="">— Seleccionar para autocompletar —</option>
+            {representantes.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
         {CAMPOS_REPRESENTANTE.map(([campo, label]) => campoTexto(campo, label))}
       </div>
 
@@ -1023,20 +1050,6 @@ function EquipoForm({
             {PROPIEDADES.map((p) => (
               <option key={p.value} value={p.value}>
                 {p.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Proveedor</span>
-          <select
-            value={f.proveedor_id ?? ''}
-            onChange={(e) => set('proveedor_id', e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">—</option>
-            {proveedores.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
               </option>
             ))}
           </select>

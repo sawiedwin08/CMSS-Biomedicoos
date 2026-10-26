@@ -1,4 +1,15 @@
-import { Hospital } from 'lucide-react'
+import {
+  AlarmClock,
+  FileText,
+  FolderOpen,
+  Hospital,
+  Laptop,
+  type LucideIcon,
+  Package,
+  Settings,
+  Stethoscope,
+  Users,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -6,6 +17,18 @@ import type { Modulo } from '../../entities/modulo'
 import { useAuth } from '../../shared/auth/AuthContext'
 import { titulo } from '../../shared/format'
 import { misModulos } from './modulosApi'
+
+// Iconos de la librería (SVG) por módulo: se ven igual en todos los equipos,
+// a diferencia de los emoji que cada sistema operativo dibuja distinto.
+const ICONOS_MODULO: Record<string, LucideIcon> = {
+  biomedicos: Stethoscope,
+  tardanzas: AlarmClock,
+  contenidos: FileText,
+  documentos: FolderOpen,
+  inventario_tecnologico: Laptop,
+  gestion_humana: Users,
+  admin: Settings,
+}
 
 export function LauncherPage() {
   const { usuario, logout } = useAuth()
@@ -51,13 +74,18 @@ export function LauncherPage() {
           </div>
         ) : (
           <div className="launcher-grid">
-            {modulos.map((m) => (
-              <Link key={m.slug} to={`/m/${m.slug}`} className="modulo-card">
-                <span className="modulo-ico">{m.icono ?? '📦'}</span>
-                <h3>{m.nombre}</h3>
-                {m.descripcion && <p className="muted">{m.descripcion}</p>}
-              </Link>
-            ))}
+            {modulos.map((m) => {
+              const Icono = ICONOS_MODULO[m.slug] ?? Package
+              return (
+                <Link key={m.slug} to={`/m/${m.slug}`} className="modulo-card">
+                  <span className="modulo-ico">
+                    <Icono size={32} strokeWidth={1.75} />
+                  </span>
+                  <h3>{m.nombre}</h3>
+                  {m.descripcion && <p className="muted">{m.descripcion}</p>}
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>
