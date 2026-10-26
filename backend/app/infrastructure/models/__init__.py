@@ -11,6 +11,7 @@ from app.infrastructure.models.documento_activo import DocumentoActivo
 from app.infrastructure.models.enlace_internet import EnlaceInternet
 from app.infrastructure.models.mantenimiento_activo import MantenimientoActivo
 from app.infrastructure.models.movimiento_activo import MovimientoActivo
+from app.infrastructure.models.notificacion import Notificacion
 from app.infrastructure.models.checklist_equipo import ChecklistEquipo, ChecklistPaso
 from app.infrastructure.models.documento_equipo import DocumentoEquipo
 from app.infrastructure.models.ejecucion_checklist import EjecucionChecklistPaso
@@ -38,6 +39,7 @@ __all__ = [
     "EnlaceInternet",
     "MantenimientoActivo",
     "MovimientoActivo",
+    "Notificacion",
     "ChecklistEquipo",
     "ChecklistPaso",
     "DocumentoEquipo",

@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from app.core.config import settings
-from app.presentation.api.deps import TicketRepo
+from app.presentation.api.deps import NotificacionRepo, TicketRepo
 from app.presentation.schemas.ticket import (
     AdjuntoRead,
     ComentarioPublicoRead,
@@ -57,10 +57,22 @@ def guardar_adjunto(tickets, ticket, archivo, origen: str, usuario_id: int | Non
     status_code=status.HTTP_201_CREATED,
     summary="Crear un ticket de soporte (público, sin login)",
 )
-def crear_ticket(datos: TicketPublicoCreate, tickets: TicketRepo) -> TicketCreado:
+def crear_ticket(
+    datos: TicketPublicoCreate, tickets: TicketRepo, notificaciones: NotificacionRepo
+) -> TicketCreado:
     d = datos.model_dump()
     d["categoria"] = datos.categoria.value
     ticket = tickets.crear(d)
+    # Avisa a los supervisores (quienes pueden asignar) del ticket nuevo.
+    destinatarios = notificaciones.destinatarios_por_permiso("mesa_ayuda:asignar")
+    notificaciones.crear_para_usuarios(
+        destinatarios,
+        tipo="ticket_nuevo",
+        titulo=f"Nuevo ticket {ticket.numero}",
+        mensaje=f"{ticket.solicitante_nombre}: {ticket.asunto}",
+        ticket_id=ticket.id,
+        ticket_numero=ticket.numero,
+    )
     return TicketCreado(numero=ticket.numero)
 
 

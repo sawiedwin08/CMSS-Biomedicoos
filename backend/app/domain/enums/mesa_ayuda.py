@@ -27,3 +27,19 @@ class EstadoTicket(StrEnum):
     RESUELTO = "resuelto"
     CERRADO = "cerrado"
     REABIERTO = "reabierto"
+
+
+# Estados en los que el ticket se considera resuelto/cerrado (para medir tiempos).
+ESTADOS_CERRADOS = frozenset({EstadoTicket.RESUELTO.value, EstadoTicket.CERRADO.value})
+
+
+class CausaTicket(StrEnum):
+    """Causa raíz / tipo de solución (la registra el técnico al resolver)."""
+
+    HARDWARE = "hardware"
+    SOFTWARE = "software"
+    CONFIGURACION = "configuracion"
+    USUARIO = "usuario"
+    RED = "red"
+    PROVEEDOR = "proveedor"
+    OTRO = "otro"

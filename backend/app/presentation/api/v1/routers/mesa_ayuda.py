@@ -1,15 +1,29 @@
 """Router interno de la Mesa de ayuda (bandeja de tickets) — requiere login."""
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
 
-from app.domain.enums.mesa_ayuda import CategoriaTicket, EstadoTicket
-from app.presentation.api.deps import CurrentUser, TicketRepo, UsuarioRepo, require_permiso
+from app.domain.enums.mesa_ayuda import (
+    ESTADOS_CERRADOS,
+    CategoriaTicket,
+    EstadoTicket,
+    PrioridadTicket,
+)
+from app.presentation.api.deps import (
+    CurrentUser,
+    NotificacionRepo,
+    TicketRepo,
+    UsuarioRepo,
+    require_permiso,
+)
 from app.presentation.api.v1.routers.soporte import guardar_adjunto
+from app.infrastructure.services.excel_tickets import generar_reporte
 from app.presentation.schemas.ticket import (
     AdjuntoRead,
+    AsignarTicket,
     ComentarioCreate,
     ComentarioRead,
     TicketListItem,
@@ -18,6 +32,16 @@ from app.presentation.schemas.ticket import (
 )
 
 router = APIRouter(prefix="/sistemas/mesa-ayuda", tags=["Sistemas · Mesa de ayuda"])
+
+_ETIQUETA_ESTADO = {
+    "nuevo": "Nuevo",
+    "asignado": "Asignado",
+    "en_proceso": "En proceso",
+    "en_espera": "En espera",
+    "resuelto": "Resuelto",
+    "cerrado": "Cerrado",
+    "reabierto": "Reabierto",
+}
 
 
 @router.get(
@@ -54,6 +78,37 @@ def listar_tickets(
 
 
 @router.get(
+    "/tickets/reporte",
+    summary="Reporte Excel de tickets (métricas de tiempos y causas)",
+    dependencies=[Depends(require_permiso("mesa_ayuda:ver"))],
+)
+def reporte_tickets(
+    tickets: TicketRepo,
+    desde: Annotated[date | None, Query()] = None,
+    hasta: Annotated[date | None, Query()] = None,
+    estado: Annotated[EstadoTicket | None, Query()] = None,
+    categoria: Annotated[CategoriaTicket | None, Query()] = None,
+    prioridad: Annotated[PrioridadTicket | None, Query()] = None,
+    tecnico_id: Annotated[int | None, Query()] = None,
+) -> Response:
+    datos = tickets.listar_para_reporte(
+        desde=desde,
+        hasta=hasta,
+        estado=estado.value if estado else None,
+        categoria=categoria.value if categoria else None,
+        prioridad=prioridad.value if prioridad else None,
+        tecnico_id=tecnico_id,
+    )
+    xlsx = generar_reporte(datos)
+    nombre = f"reporte_tickets_{date.today().isoformat()}.xlsx"
+    return Response(
+        content=xlsx,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={nombre}"},
+    )
+
+
+@router.get(
     "/tickets/{ticket_id}",
     response_model=TicketRead,
     summary="Ver un ticket",
@@ -73,21 +128,66 @@ def obtener_ticket(ticket_id: int, tickets: TicketRepo) -> TicketRead:
     dependencies=[Depends(require_permiso("mesa_ayuda:editar"))],
 )
 def actualizar_ticket(
-    ticket_id: int, datos: TicketUpdate, tickets: TicketRepo, usuarios: UsuarioRepo
+    ticket_id: int,
+    datos: TicketUpdate,
+    tickets: TicketRepo,
+    usuario: CurrentUser,
+    notificaciones: NotificacionRepo,
 ) -> TicketRead:
-    if tickets.obtener_por_id(ticket_id) is None:
+    actual = tickets.obtener_por_id(ticket_id)
+    if actual is None:
+        raise HTTPException(status_code=404, detail="El ticket no existe.")
+    estado_anterior = actual.estado
+    cambios: dict = {
+        "estado": datos.estado.value,
+        "prioridad": datos.prioridad.value,
+        "categoria": datos.categoria.value,
+        "causa": datos.causa.value if datos.causa else None,
+        "solucion": datos.solucion,
+    }
+    # Marca de cierre: se fija al entrar a resuelto/cerrado y se limpia al reabrir.
+    if datos.estado.value in ESTADOS_CERRADOS:
+        if actual.fecha_cierre is None:
+            cambios["fecha_cierre"] = datetime.now()
+    elif actual.fecha_cierre is not None:
+        cambios["fecha_cierre"] = None
+    t = tickets.actualizar(ticket_id, cambios)
+    # Novedad a los supervisores cuando cambia el estado (excepto al propio autor).
+    if estado_anterior != t.estado:
+        destinatarios = notificaciones.destinatarios_por_permiso(
+            "mesa_ayuda:asignar", excluir_usuario_id=usuario.id
+        )
+        notificaciones.crear_para_usuarios(
+            destinatarios,
+            tipo="ticket_estado",
+            titulo=f"Ticket {t.numero}: {_ETIQUETA_ESTADO.get(t.estado, t.estado)}",
+            mensaje=f"{usuario.nombre} cambió el estado a "
+            f"«{_ETIQUETA_ESTADO.get(t.estado, t.estado)}».",
+            ticket_id=t.id,
+            ticket_numero=t.numero,
+        )
+    return TicketRead.model_validate(t)
+
+
+@router.put(
+    "/tickets/{ticket_id}/asignar",
+    response_model=TicketRead,
+    summary="Asignar o reasignar el técnico del ticket",
+    dependencies=[Depends(require_permiso("mesa_ayuda:asignar"))],
+)
+def asignar_ticket(
+    ticket_id: int, datos: AsignarTicket, tickets: TicketRepo, usuarios: UsuarioRepo
+) -> TicketRead:
+    actual = tickets.obtener_por_id(ticket_id)
+    if actual is None:
         raise HTTPException(status_code=404, detail="El ticket no existe.")
     if datos.tecnico_id and usuarios.obtener_por_id(datos.tecnico_id) is None:
         raise HTTPException(status_code=400, detail="El técnico asignado no existe.")
-    t = tickets.actualizar(
-        ticket_id,
-        {
-            "estado": datos.estado.value,
-            "prioridad": datos.prioridad.value,
-            "categoria": datos.categoria.value,
-            "tecnico_id": datos.tecnico_id,
-        },
-    )
+    cambios: dict = {"tecnico_id": datos.tecnico_id}
+    # Al asignar un ticket aún nuevo, pasa automáticamente a "asignado".
+    if datos.tecnico_id and actual.estado == "nuevo":
+        cambios["estado"] = "asignado"
+    t = tickets.actualizar(ticket_id, cambios)
     return TicketRead.model_validate(t)
 
 
@@ -109,9 +209,14 @@ def listar_comentarios(ticket_id: int, tickets: TicketRepo) -> list[ComentarioRe
     dependencies=[Depends(require_permiso("mesa_ayuda:editar"))],
 )
 def agregar_comentario(
-    ticket_id: int, datos: ComentarioCreate, tickets: TicketRepo, usuario: CurrentUser
+    ticket_id: int,
+    datos: ComentarioCreate,
+    tickets: TicketRepo,
+    usuario: CurrentUser,
+    notificaciones: NotificacionRepo,
 ) -> ComentarioRead:
-    if tickets.obtener_por_id(ticket_id) is None:
+    ticket = tickets.obtener_por_id(ticket_id)
+    if ticket is None:
         raise HTTPException(status_code=404, detail="El ticket no existe.")
     c = tickets.agregar_comentario(
         ticket_id,
@@ -119,6 +224,21 @@ def agregar_comentario(
         texto_=datos.texto,
         es_publico=datos.es_publico,
         usuario_id=usuario.id,
+    )
+    # Primer comentario del equipo = primera respuesta (para medir tiempos).
+    tickets.marcar_primera_respuesta(ticket_id)
+    # Novedad a los supervisores (excepto al propio autor del comentario).
+    destinatarios = notificaciones.destinatarios_por_permiso(
+        "mesa_ayuda:asignar", excluir_usuario_id=usuario.id
+    )
+    resumen = datos.texto if len(datos.texto) <= 80 else datos.texto[:80] + "…"
+    notificaciones.crear_para_usuarios(
+        destinatarios,
+        tipo="ticket_comentario",
+        titulo=f"Comentario en {ticket.numero}",
+        mensaje=f"{usuario.nombre}: {resumen}",
+        ticket_id=ticket.id,
+        ticket_numero=ticket.numero,
     )
     return ComentarioRead.model_validate(c)
 

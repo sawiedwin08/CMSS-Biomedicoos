@@ -1,4 +1,6 @@
 """Repositorio SQLAlchemy de la Mesa de ayuda (tickets + comentarios)."""
+from datetime import date, datetime, timedelta
+
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
@@ -75,6 +77,49 @@ class TicketRepositorySQLAlchemy:
         self._session.commit()
         self._session.refresh(ticket)
         return ticket
+
+    def marcar_primera_respuesta(self, ticket_id: int) -> None:
+        """Fija la fecha de primera respuesta si aún no existe (idempotente)."""
+        ticket = self._session.get(Ticket, ticket_id)
+        if ticket is not None and ticket.fecha_primera_respuesta is None:
+            ticket.fecha_primera_respuesta = datetime.now()
+            self._session.commit()
+
+    def listar_para_reporte(
+        self,
+        desde: date | None = None,
+        hasta: date | None = None,
+        estado: str | None = None,
+        categoria: str | None = None,
+        prioridad: str | None = None,
+        tecnico_id: int | None = None,
+    ) -> list[tuple[Ticket, str | None, int]]:
+        """Tickets + nombre del técnico + nº de comentarios, para el reporte."""
+        n_com = (
+            select(func.count(TicketComentario.id))
+            .where(TicketComentario.ticket_id == Ticket.id)
+            .scalar_subquery()
+        )
+        stmt = select(Ticket, UsuarioModel.nombre, n_com).join(
+            UsuarioModel, Ticket.tecnico_id == UsuarioModel.id, isouter=True
+        )
+        if desde:
+            stmt = stmt.where(Ticket.created_at >= datetime.combine(desde, datetime.min.time()))
+        if hasta:
+            # Incluye todo el día "hasta".
+            stmt = stmt.where(
+                Ticket.created_at < datetime.combine(hasta + timedelta(days=1), datetime.min.time())
+            )
+        if estado:
+            stmt = stmt.where(Ticket.estado == estado)
+        if categoria:
+            stmt = stmt.where(Ticket.categoria == categoria)
+        if prioridad:
+            stmt = stmt.where(Ticket.prioridad == prioridad)
+        if tecnico_id:
+            stmt = stmt.where(Ticket.tecnico_id == tecnico_id)
+        stmt = stmt.order_by(Ticket.created_at)
+        return [(r[0], r[1], int(r[2] or 0)) for r in self._session.execute(stmt).all()]
 
     def contar_nuevos(self) -> int:
         total = self._session.scalar(
