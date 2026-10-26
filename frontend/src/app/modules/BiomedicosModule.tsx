@@ -3,6 +3,7 @@ import {
   Building2,
   HeartPulse,
   Home,
+  Stethoscope,
   Store,
   Truck,
   Wrench,
@@ -12,7 +13,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { DashboardPage } from '../../features/dashboard/DashboardPage'
 import { EquiposPage } from '../../features/inventario/EquiposPage'
 import { InventarioPage } from '../../features/inventario/InventarioPage'
-import { ProveedoresPage } from '../../features/inventario/ProveedoresPage'
+import { RepresentantesPage } from '../../features/inventario/RepresentantesPage'
 import { SedesPage } from '../../features/inventario/SedesPage'
 import { ServiciosPage } from '../../features/inventario/ServiciosPage'
 import { MantenimientoPage } from '../../features/mantenimiento/MantenimientoPage'
@@ -35,14 +36,14 @@ export function BiomedicosModule() {
     { to: 'inventario', icono: Boxes, texto: 'Inventario', visible: verInv },
     { to: 'sedes', icono: Building2, texto: 'Sedes', visible: verInv },
     { to: 'servicios', icono: Store, texto: 'Servicios', visible: verInv },
-    { to: 'proveedores', icono: Truck, texto: 'Proveedores', visible: verInv },
+    { to: 'representantes', icono: Truck, texto: 'Representantes', visible: verInv },
     { to: 'mantenimiento', icono: Wrench, texto: 'Mantenimiento', visible: verMant },
   ]
 
   return (
     <ModuleShell
       moduloNombre="Equipos Biomédicos"
-      moduloIcono="🩺"
+      moduloIcono={Stethoscope}
       basePath={BASE}
       items={items}
     >
@@ -52,7 +53,7 @@ export function BiomedicosModule() {
         {verInv && <Route path="equipos" element={<EquiposPage />} />}
         {verInv && <Route path="sedes" element={<SedesPage />} />}
         {verInv && <Route path="servicios" element={<ServiciosPage />} />}
-        {verInv && <Route path="proveedores" element={<ProveedoresPage />} />}
+        {verInv && <Route path="representantes" element={<RepresentantesPage />} />}
         {verMant && <Route path="mantenimiento" element={<MantenimientoPage />} />}
         <Route path="*" element={<Navigate to="" replace />} />
       </Routes>

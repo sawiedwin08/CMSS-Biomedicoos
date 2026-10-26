@@ -1,4 +1,4 @@
-import { Blocks, ShieldCheck, Users } from 'lucide-react'
+import { Blocks, Settings, ShieldCheck, Users } from 'lucide-react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import { ModulosPage } from '../../features/plataforma/ModulosPage'
@@ -36,7 +36,7 @@ export function AdminModule() {
   return (
     <ModuleShell
       moduloNombre="Administración"
-      moduloIcono="⚙️"
+      moduloIcono={Settings}
       basePath={BASE}
       items={items}
     >

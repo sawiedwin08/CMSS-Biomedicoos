@@ -1,3 +1,4 @@
+import { FolderOpen } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 
 import { useAuth } from '../../shared/auth/AuthContext'
@@ -12,7 +13,7 @@ export function GestionDocumentalModule() {
   }
 
   return (
-    <ModuleShell moduloNombre="Gestión Documental" moduloIcono="📄" basePath={BASE} items={[]}>
+    <ModuleShell moduloNombre="Gestión Documental" moduloIcono={FolderOpen} basePath={BASE} items={[]}>
       <div className="card">
         <h2>Módulo en Construcción</h2>
         <p className="muted">Este módulo está en desarrollo y próximamente estará disponible.</p>

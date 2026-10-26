@@ -19,6 +19,7 @@ from app.presentation.api.v1.routers import (
     modulos,
     permisos,
     proveedores,
+    representantes,
     roles,
     sedes,
     servicios,
@@ -62,6 +63,7 @@ def crear_app() -> FastAPI:
     app.include_router(sedes.router, prefix=settings.API_V1_PREFIX)
     app.include_router(servicios.router, prefix=settings.API_V1_PREFIX)
     app.include_router(proveedores.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(representantes.router, prefix=settings.API_V1_PREFIX)
     app.include_router(equipos.router, prefix=settings.API_V1_PREFIX)
     app.include_router(mantenimiento.router, prefix=settings.API_V1_PREFIX)
     app.include_router(modulos.router, prefix=settings.API_V1_PREFIX)

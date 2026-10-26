@@ -16,13 +16,13 @@ export interface NavItem {
 /** Cascarón (sidebar + topbar) reutilizable para cada módulo de la plataforma. */
 export function ModuleShell({
   moduloNombre,
-  moduloIcono,
+  moduloIcono: Icono,
   basePath,
   items,
   children,
 }: {
   moduloNombre: string
-  moduloIcono: string
+  moduloIcono: LucideIcon
   basePath: string
   items: NavItem[]
   children: ReactNode
@@ -34,7 +34,9 @@ export function ModuleShell({
     <div className="layout">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <span className="brand-icon">{moduloIcono}</span>
+          <span className="brand-icon">
+            <Icono size={24} strokeWidth={1.75} />
+          </span>
           <span>{moduloNombre}</span>
         </div>
 

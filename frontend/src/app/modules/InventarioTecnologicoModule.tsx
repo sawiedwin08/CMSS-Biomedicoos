@@ -3,6 +3,7 @@ import {
   FileText,
   Home,
   KeyRound,
+  Laptop,
   LifeBuoy,
   Network,
   Wrench,
@@ -70,7 +71,7 @@ export function InventarioTecnologicoModule() {
   ]
 
   return (
-    <ModuleShell moduloNombre="Sistemas" moduloIcono="💻" basePath={BASE} items={items}>
+    <ModuleShell moduloNombre="Sistemas" moduloIcono={Laptop} basePath={BASE} items={items}>
       <Routes>
         <Route path="" element={<InicioPage />} />
         <Route path="mesa-ayuda" element={<MesaAyudaPage />} />
