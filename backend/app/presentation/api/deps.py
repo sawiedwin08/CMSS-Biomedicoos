@@ -61,6 +61,9 @@ from app.infrastructure.repositories.permiso_repository_sqlalchemy import (
 from app.infrastructure.repositories.proveedor_repository_sqlalchemy import (
     ProveedorRepositorySQLAlchemy,
 )
+from app.infrastructure.repositories.notificacion_repository_sqlalchemy import (
+    NotificacionRepositorySQLAlchemy,
+)
 from app.infrastructure.repositories.representante_repository_sqlalchemy import (
     RepresentanteRepositorySQLAlchemy,
 )
@@ -122,6 +125,10 @@ def get_proveedor_repository(db: DbSession) -> ProveedorRepository:
 
 def get_representante_repository(db: DbSession) -> RepresentanteRepository:
     return RepresentanteRepositorySQLAlchemy(db)
+
+
+def get_notificacion_repository(db: DbSession) -> NotificacionRepositorySQLAlchemy:
+    return NotificacionRepositorySQLAlchemy(db)
 
 
 def get_equipo_repository(db: DbSession) -> EquipoRepository:
@@ -197,6 +204,9 @@ ServicioRepo = Annotated[ServicioRepository, Depends(get_servicio_repository)]
 ProveedorRepo = Annotated[ProveedorRepository, Depends(get_proveedor_repository)]
 RepresentanteRepo = Annotated[
     RepresentanteRepository, Depends(get_representante_repository)
+]
+NotificacionRepo = Annotated[
+    NotificacionRepositorySQLAlchemy, Depends(get_notificacion_repository)
 ]
 EquipoRepo = Annotated[EquipoRepository, Depends(get_equipo_repository)]
 ActivoRepo = Annotated[ActivoRepository, Depends(get_activo_repository)]

@@ -3,7 +3,12 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.domain.enums.mesa_ayuda import CategoriaTicket, EstadoTicket, PrioridadTicket
+from app.domain.enums.mesa_ayuda import (
+    CategoriaTicket,
+    CausaTicket,
+    EstadoTicket,
+    PrioridadTicket,
+)
 
 
 # ---------- Público (sin login) ----------
@@ -83,6 +88,10 @@ class TicketRead(BaseModel):
     prioridad: str
     estado: str
     tecnico_id: int | None
+    causa: str | None = None
+    solucion: str | None = None
+    fecha_primera_respuesta: datetime | None = None
+    fecha_cierre: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -91,6 +100,13 @@ class TicketUpdate(BaseModel):
     estado: EstadoTicket
     prioridad: PrioridadTicket
     categoria: CategoriaTicket
+    causa: CausaTicket | None = None
+    solucion: str | None = Field(default=None, max_length=2000)
+
+
+class AsignarTicket(BaseModel):
+    """Asignación/reasignación del técnico (permiso aparte)."""
+
     tecnico_id: int | None = None
 
 

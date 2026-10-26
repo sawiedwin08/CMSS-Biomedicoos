@@ -1,10 +1,14 @@
+import { Bell } from 'lucide-react'
 import { type ChangeEvent, useEffect, useRef, useState } from 'react'
 
 import {
   CATEGORIAS_T,
+  CAUSAS_T,
   type CategoriaTicket,
+  type CausaTicket,
   ESTADOS_T,
   ETIQUETA_CATEGORIA_T,
+  ETIQUETA_CAUSA,
   ETIQUETA_ESTADO_T,
   ETIQUETA_PRIORIDAD,
   type EstadoTicket,
@@ -19,8 +23,10 @@ import {
   actualizarTicket,
   type Adjunto,
   agregarComentario,
+  asignarTicket,
   type Comentario,
   contarNuevos,
+  descargarReporteTickets,
   listarAdjuntos,
   listarComentarios,
   listarTickets,
@@ -30,6 +36,13 @@ import {
   type TicketListItem,
   urlAdjunto,
 } from './mesaAyudaApi'
+import {
+  contarNotificaciones,
+  listarNotificaciones,
+  marcarNotificacionLeida,
+  marcarTodasLeidas,
+  type Notificacion,
+} from './notificacionesApi'
 import { VisorPdfModal } from './VisorPdfModal'
 
 const RESPUESTAS_RAPIDAS = [
@@ -48,6 +61,7 @@ export function MesaAyudaPage() {
   const { puede } = useAuth()
   const puedeVer = puede('mesa_ayuda:ver')
   const puedeEditar = puede('mesa_ayuda:editar')
+  const puedeAsignar = puede('mesa_ayuda:asignar')
 
   const [items, setItems] = useState<TicketListItem[]>([])
   const [nuevos, setNuevos] = useState(0)
@@ -59,7 +73,10 @@ export function MesaAyudaPage() {
   const [abierto, setAbierto] = useState<number | null>(null)
   const [usuarios, setUsuarios] = useState<Opcion[]>([])
   const [toast, setToast] = useState<string | null>(null)
-  const prevNuevosRef = useRef<number | null>(null)
+  const [notifs, setNotifs] = useState<Notificacion[]>([])
+  const [notifCount, setNotifCount] = useState(0)
+  const [verNotifs, setVerNotifs] = useState(false)
+  const prevNotifRef = useRef<number | null>(null)
 
   function beep() {
     try {
@@ -79,9 +96,7 @@ export function MesaAyudaPage() {
     }
   }
 
-  function notificar(cuantos: number) {
-    const txt =
-      cuantos === 1 ? 'Llegó 1 ticket nuevo' : `Llegaron ${cuantos} tickets nuevos`
+  function notificar(txt: string) {
     setToast('🔔 ' + txt)
     window.setTimeout(() => setToast(null), 6000)
     beep()
@@ -102,12 +117,40 @@ export function MesaAyudaPage() {
         texto: texto || undefined,
       }),
     )
-    const n = await contarNuevos()
-    if (prevNuevosRef.current !== null && n > prevNuevosRef.current) {
-      notificar(n - prevNuevosRef.current)
+    setNuevos(await contarNuevos())
+  }
+
+  // Sondea novedades (ticket nuevo, comentario, cambio de estado) y avisa.
+  async function sondearNotifs() {
+    const c = await contarNotificaciones()
+    if (prevNotifRef.current !== null && c > prevNotifRef.current) {
+      const d = c - prevNotifRef.current
+      notificar(d === 1 ? 'Tienes 1 novedad nueva' : `Tienes ${d} novedades nuevas`)
     }
-    prevNuevosRef.current = n
-    setNuevos(n)
+    prevNotifRef.current = c
+    setNotifCount(c)
+  }
+
+  async function abrirNotifs() {
+    if (!verNotifs) setNotifs(await listarNotificaciones().catch(() => []))
+    setVerNotifs((v) => !v)
+  }
+
+  async function onNotifClick(n: Notificacion) {
+    try {
+      if (!n.leido) await marcarNotificacionLeida(n.id)
+    } catch {
+      /* ignora */
+    }
+    setVerNotifs(false)
+    await sondearNotifs().catch(() => {})
+    if (n.ticket_id) setAbierto(n.ticket_id)
+  }
+
+  async function leerTodas() {
+    await marcarTodasLeidas().catch(() => {})
+    setNotifs((prev) => prev.map((n) => ({ ...n, leido: true })))
+    await sondearNotifs().catch(() => {})
   }
 
   useEffect(() => {
@@ -127,13 +170,22 @@ export function MesaAyudaPage() {
     cargar()
       .catch((err) => setError(detalleError(err, 'No se pudieron cargar los tickets.')))
       .finally(() => setCargando(false))
-    // Se actualiza sola cada 15s para que los tickets nuevos aparezcan sin refrescar.
+    // Se actualiza sola cada 10s para que los tickets nuevos aparezcan sin refrescar.
     const id = setInterval(() => {
       cargar().catch(() => {})
-    }, 15000)
+    }, 10000)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fEstado, fCategoria, texto])
+
+  // Sondeo de novedades (independiente de los filtros): campanita + aviso.
+  useEffect(() => {
+    if (!puedeVer) return
+    sondearNotifs().catch(() => {})
+    const id = setInterval(() => sondearNotifs().catch(() => {}), 10000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!puedeVer) {
     return <div className="card muted">No tienes permiso para ver la mesa de ayuda.</div>
@@ -178,7 +230,124 @@ export function MesaAyudaPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <strong>Bandeja de tickets</strong>
           <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                className="icon-btn"
+                title="Notificaciones"
+                onClick={() => abrirNotifs().catch(() => {})}
+                style={{ position: 'relative' }}
+              >
+                <Bell size={18} />
+                {notifCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      background: '#e11d48',
+                      color: '#fff',
+                      borderRadius: 10,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      minWidth: 16,
+                      height: 16,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                    }}
+                  >
+                    {notifCount > 99 ? '99+' : notifCount}
+                  </span>
+                )}
+              </button>
+              {verNotifs && (
+                <>
+                  <div
+                    onClick={() => setVerNotifs(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 70 }}
+                  />
+                  <div
+                    className="card"
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 'calc(100% + 6px)',
+                      zIndex: 80,
+                      width: 340,
+                      maxHeight: 420,
+                      overflowY: 'auto',
+                      padding: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        borderBottom: '1px solid var(--borde)',
+                      }}
+                    >
+                      <strong>Notificaciones</strong>
+                      <button
+                        className="btn-ghost"
+                        style={{ padding: '2px 8px', fontSize: 12 }}
+                        onClick={() => leerTodas().catch(() => {})}
+                      >
+                        Marcar todas
+                      </button>
+                    </div>
+                    {notifs.length === 0 ? (
+                      <div className="muted" style={{ padding: 12 }}>
+                        Sin notificaciones.
+                      </div>
+                    ) : (
+                      notifs.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => onNotifClick(n)}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '8px 12px',
+                            border: 'none',
+                            borderBottom: '1px solid var(--borde)',
+                            background: n.leido ? 'transparent' : 'rgba(37,99,235,0.08)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{ fontWeight: n.leido ? 400 : 700, fontSize: 13 }}>
+                            {n.titulo}
+                          </div>
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            {n.mensaje}
+                          </div>
+                          <div className="muted" style={{ fontSize: 11 }}>
+                            {new Date(n.created_at).toLocaleString()}
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             <span className="badge">{nuevos} nuevo(s)</span>
+            <button
+              className="btn-ghost"
+              onClick={() =>
+                descargarReporteTickets({
+                  estado: fEstado || undefined,
+                  categoria: fCategoria || undefined,
+                }).catch((err) =>
+                  setError(detalleError(err, 'No se pudo generar el reporte.')),
+                )
+              }
+            >
+              Exportar reporte
+            </button>
             <button className="btn-ghost" onClick={() => cargar().catch(() => {})}>
               Actualizar
             </button>
@@ -230,6 +399,7 @@ export function MesaAyudaPage() {
               ticketId={abierto}
               usuarios={usuarios}
               puedeEditar={puedeEditar}
+              puedeAsignar={puedeAsignar}
               onError={setError}
               onCambio={cargar}
               onCerrar={() => setAbierto(null)}
@@ -264,6 +434,7 @@ function TicketDetalle({
   ticketId,
   usuarios,
   puedeEditar,
+  puedeAsignar,
   onError,
   onCambio,
   onCerrar,
@@ -271,6 +442,7 @@ function TicketDetalle({
   ticketId: number
   usuarios: Opcion[]
   puedeEditar: boolean
+  puedeAsignar: boolean
   onError: (m: string) => void
   onCambio: () => Promise<void>
   onCerrar: () => void
@@ -281,6 +453,8 @@ function TicketDetalle({
   const [prioridad, setPrioridad] = useState<PrioridadTicket>('media')
   const [categoria, setCategoria] = useState<CategoriaTicket>('otro')
   const [tecnicoId, setTecnicoId] = useState<number | null>(null)
+  const [causa, setCausa] = useState<CausaTicket | ''>('')
+  const [solucion, setSolucion] = useState('')
   const [nuevoComentario, setNuevoComentario] = useState('')
   const [esPublico, setEsPublico] = useState(true)
   const [guardando, setGuardando] = useState(false)
@@ -295,6 +469,8 @@ function TicketDetalle({
     setPrioridad(ticket.prioridad)
     setCategoria(ticket.categoria)
     setTecnicoId(ticket.tecnico_id)
+    setCausa(ticket.causa ?? '')
+    setSolucion(ticket.solucion ?? '')
     setComentarios(await listarComentarios(ticketId))
     setAdjuntos(await listarAdjuntos(ticketId))
   }
@@ -327,12 +503,29 @@ function TicketDetalle({
   async function guardar() {
     setGuardando(true)
     try {
-      await actualizarTicket(ticketId, { estado, prioridad, categoria, tecnico_id: tecnicoId })
+      await actualizarTicket(ticketId, {
+        estado,
+        prioridad,
+        categoria,
+        causa: causa || null,
+        solucion: solucion.trim() || null,
+      })
       await onCambio()
     } catch (err) {
       onError(detalleError(err, 'No se pudo actualizar el ticket.'))
     } finally {
       setGuardando(false)
+    }
+  }
+
+  async function asignar(id: number | null) {
+    setTecnicoId(id)
+    try {
+      await asignarTicket(ticketId, id)
+      await cargar()
+      await onCambio()
+    } catch (err) {
+      onError(detalleError(err, 'No se pudo asignar el ticket.'))
     }
   }
 
@@ -346,6 +539,8 @@ function TicketDetalle({
       onError(detalleError(err, 'No se pudo agregar el comentario.'))
     }
   }
+
+  const tecnicoNombre = usuarios.find((u) => u.id === tecnicoId)?.nombre ?? '—'
 
   if (!t) return <div className="muted">Cargando…</div>
 
@@ -362,6 +557,30 @@ function TicketDetalle({
         <div className="card" style={{ background: 'var(--fondo)', boxShadow: 'none' }}>
           {t.descripcion}
         </div>
+
+        {puedeAsignar ? (
+          <>
+            <h4>Asignación</h4>
+            <label className="field">
+              <span>Técnico asignado</span>
+              <select
+                value={tecnicoId ?? ''}
+                onChange={(e) => asignar(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">— Sin asignar —</option>
+                {usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        ) : (
+          <p className="muted" style={{ marginTop: 8 }}>
+            Técnico asignado: <strong>{t.tecnico_id ? tecnicoNombre : 'Sin asignar'}</strong>
+          </p>
+        )}
 
         {puedeEditar && (
           <>
@@ -398,20 +617,34 @@ function TicketDetalle({
                 </select>
               </label>
               <label className="field">
-                <span>Técnico asignado</span>
-                <select
-                  value={tecnicoId ?? ''}
-                  onChange={(e) => setTecnicoId(e.target.value ? Number(e.target.value) : null)}
-                >
+                <span>Causa / tipo de solución</span>
+                <select value={causa} onChange={(e) => setCausa(e.target.value as CausaTicket | '')}>
                   <option value="">—</option>
-                  {usuarios.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombre}
+                  {CAUSAS_T.map((c) => (
+                    <option key={c} value={c}>
+                      {ETIQUETA_CAUSA[c]}
                     </option>
                   ))}
                 </select>
               </label>
             </div>
+            <label className="field">
+              <span>Solución aplicada</span>
+              <textarea
+                value={solucion}
+                onChange={(e) => setSolucion(e.target.value)}
+                rows={2}
+                placeholder="Qué se hizo para resolver el caso"
+              />
+            </label>
+            {(t.fecha_primera_respuesta || t.fecha_cierre) && (
+              <p className="muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>
+                {t.fecha_primera_respuesta &&
+                  `1ª respuesta: ${new Date(t.fecha_primera_respuesta).toLocaleString()}`}
+                {t.fecha_primera_respuesta && t.fecha_cierre && ' · '}
+                {t.fecha_cierre && `Cierre: ${new Date(t.fecha_cierre).toLocaleString()}`}
+              </p>
+            )}
             <button className="btn-primary" disabled={guardando} onClick={guardar} style={{ marginTop: 4 }}>
               {guardando ? 'Guardando…' : 'Guardar cambios'}
             </button>

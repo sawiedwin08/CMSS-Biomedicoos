@@ -1,4 +1,9 @@
-import type { CategoriaTicket, EstadoTicket, PrioridadTicket } from '../../entities/ticket'
+import type {
+  CategoriaTicket,
+  CausaTicket,
+  EstadoTicket,
+  PrioridadTicket,
+} from '../../entities/ticket'
 import { api } from '../../shared/api/client'
 
 export interface TicketListItem {
@@ -25,6 +30,10 @@ export interface Ticket {
   prioridad: PrioridadTicket
   estado: EstadoTicket
   tecnico_id: number | null
+  causa: CausaTicket | null
+  solucion: string | null
+  fecha_primera_respuesta: string | null
+  fecha_cierre: string | null
   created_at: string
   updated_at: string
 }
@@ -41,7 +50,37 @@ export interface TicketUpdate {
   estado: EstadoTicket
   prioridad: PrioridadTicket
   categoria: CategoriaTicket
-  tecnico_id: number | null
+  causa: CausaTicket | null
+  solucion: string | null
+}
+
+export interface FiltroReporte {
+  desde?: string
+  hasta?: string
+  estado?: EstadoTicket
+  categoria?: CategoriaTicket
+  prioridad?: PrioridadTicket
+  tecnico_id?: number
+}
+
+export async function descargarReporteTickets(filtro: FiltroReporte = {}): Promise<void> {
+  const params: Record<string, string> = {}
+  if (filtro.desde) params.desde = filtro.desde
+  if (filtro.hasta) params.hasta = filtro.hasta
+  if (filtro.estado) params.estado = filtro.estado
+  if (filtro.categoria) params.categoria = filtro.categoria
+  if (filtro.prioridad) params.prioridad = filtro.prioridad
+  if (filtro.tecnico_id) params.tecnico_id = String(filtro.tecnico_id)
+  const res = await api.get('/sistemas/mesa-ayuda/tickets/reporte', {
+    params,
+    responseType: 'blob',
+  })
+  const url = URL.createObjectURL(res.data as Blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `reporte_tickets_${new Date().toISOString().slice(0, 10)}.xlsx`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export interface FiltroTickets {
@@ -71,6 +110,13 @@ export async function obtenerTicket(id: number): Promise<Ticket> {
 
 export async function actualizarTicket(id: number, datos: TicketUpdate): Promise<Ticket> {
   const { data } = await api.put<Ticket>(`/sistemas/mesa-ayuda/tickets/${id}`, datos)
+  return data
+}
+
+export async function asignarTicket(id: number, tecnicoId: number | null): Promise<Ticket> {
+  const { data } = await api.put<Ticket>(`/sistemas/mesa-ayuda/tickets/${id}/asignar`, {
+    tecnico_id: tecnicoId,
+  })
   return data
 }
 

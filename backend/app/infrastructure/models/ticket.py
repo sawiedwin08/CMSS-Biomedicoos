@@ -1,5 +1,7 @@
 """Ticket de la Mesa de ayuda (módulo Sistemas)."""
-from sqlalchemy import ForeignKey, String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db.base import Base
@@ -31,3 +33,13 @@ class Ticket(Base, TimestampMixin):
     tecnico_id: Mapped[int | None] = mapped_column(
         ForeignKey("usuarios.id", ondelete="SET NULL"), index=True
     )
+
+    # --- Resolución (lo registra el técnico) ---
+    causa: Mapped[str | None] = mapped_column(String(30))
+    solucion: Mapped[str | None] = mapped_column(Text)
+
+    # --- Marcas de tiempo para métricas ---
+    # Primera respuesta del equipo (primer comentario interno).
+    fecha_primera_respuesta: Mapped[datetime | None] = mapped_column(DateTime)
+    # Momento en que el ticket llegó a resuelto/cerrado (se limpia si se reabre).
+    fecha_cierre: Mapped[datetime | None] = mapped_column(DateTime)

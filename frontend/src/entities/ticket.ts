@@ -9,6 +9,15 @@ export type CategoriaTicket =
 
 export type PrioridadTicket = 'baja' | 'media' | 'alta' | 'critica'
 
+export type CausaTicket =
+  | 'hardware'
+  | 'software'
+  | 'configuracion'
+  | 'usuario'
+  | 'red'
+  | 'proveedor'
+  | 'otro'
+
 export type EstadoTicket =
   | 'nuevo'
   | 'asignado'
@@ -54,6 +63,26 @@ export const CATEGORIAS_T: CategoriaTicket[] = [
   'impresion',
   'otro',
 ]
+export const ETIQUETA_CAUSA: Record<CausaTicket, string> = {
+  hardware: 'Hardware',
+  software: 'Software',
+  configuracion: 'Configuración',
+  usuario: 'Usuario / capacitación',
+  red: 'Red',
+  proveedor: 'Proveedor',
+  otro: 'Otro',
+}
+
+export const CAUSAS_T: CausaTicket[] = [
+  'hardware',
+  'software',
+  'configuracion',
+  'usuario',
+  'red',
+  'proveedor',
+  'otro',
+]
+
 export const PRIORIDADES_T: PrioridadTicket[] = ['baja', 'media', 'alta', 'critica']
 export const ESTADOS_T: EstadoTicket[] = [
   'nuevo',

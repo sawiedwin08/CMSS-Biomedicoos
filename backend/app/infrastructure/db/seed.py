@@ -24,8 +24,10 @@ ADMIN_NOMBRE = os.getenv("SEED_ADMIN_NOMBRE", "Administrador")
 def seed() -> None:
     session = SessionLocal()
     try:
-        # 1) Roles y permisos base
+        # 1) Roles y permisos base (commit propio: debe persistir aunque el
+        #    admin ya exista y la rama de abajo retorne sin commit).
         seed_rbac(session)
+        session.commit()
         print("[seed] RBAC (permisos y roles de sistema) verificado.")
 
         # 2) Usuario administrador

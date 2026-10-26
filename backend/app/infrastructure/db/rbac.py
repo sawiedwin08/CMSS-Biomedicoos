@@ -49,7 +49,8 @@ CATALOGO: list[tuple[str, str, str]] = [
     ("sistemas", "eliminar", "Eliminar activos de TI"),
     ("sistemas", "credenciales", "Ver las contraseñas de las cuentas de correo"),
     ("mesa_ayuda", "ver", "Ver la bandeja de tickets de soporte"),
-    ("mesa_ayuda", "editar", "Gestionar tickets (asignar, responder, cambiar estado)"),
+    ("mesa_ayuda", "editar", "Gestionar tickets (responder, cambiar estado, causa)"),
+    ("mesa_ayuda", "asignar", "Asignar o reasignar tickets a los técnicos"),
 ]
 
 # --- Roles de sistema: (nombre, descripción) ---
@@ -87,7 +88,7 @@ MODULOS_SISTEMA: list[tuple[str, str, str, str, int]] = [
     (
         "inventario_tecnologico",
         "Sistemas",
-        "Módulo en construcción.",
+        "Mesa de ayuda, gestión del inventario tecnológico y actas de asignación.",
         "💻",
         4,
     ),
@@ -215,16 +216,18 @@ def seed_rbac(session: Session) -> None:
         m.slug: m for m in session.scalars(select(ModuloModel)).all()
     }
     for slug, nombre_mod, descripcion_mod, icono, orden in MODULOS_SISTEMA:
-        if slug not in modulos_existentes:
-            modulo = ModuloModel(
-                slug=slug,
-                nombre=nombre_mod,
-                descripcion=descripcion_mod,
-                icono=icono,
-                orden=orden,
-            )
+        modulo = modulos_existentes.get(slug)
+        if modulo is None:
+            modulo = ModuloModel(slug=slug)
             session.add(modulo)
             modulos_existentes[slug] = modulo
+        # El seed es la fuente de verdad del metadato del módulo: sincroniza
+        # nombre/descripción/icono/orden también cuando el módulo ya existe,
+        # para que editar MODULOS_SISTEMA y re-sembrar aplique los cambios.
+        modulo.nombre = nombre_mod
+        modulo.descripcion = descripcion_mod
+        modulo.icono = icono
+        modulo.orden = orden
     session.flush()
 
     # 4) Acceso a módulos por rol (admin siempre todos; otros solo si están vacíos)

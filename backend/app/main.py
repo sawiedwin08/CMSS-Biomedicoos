@@ -17,6 +17,7 @@ from app.presentation.api.v1.routers import (
     mantenimiento,
     mesa_ayuda,
     modulos,
+    notificaciones,
     permisos,
     proveedores,
     representantes,
@@ -73,6 +74,7 @@ def crear_app() -> FastAPI:
     app.include_router(mesa_ayuda.router, prefix=settings.API_V1_PREFIX)
     app.include_router(soporte.router, prefix=settings.API_V1_PREFIX)
     app.include_router(sistemas_inicio.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(notificaciones.router, prefix=settings.API_V1_PREFIX)
 
 
     @app.get("/health", tags=["Sistema"], summary="Estado del servicio")
