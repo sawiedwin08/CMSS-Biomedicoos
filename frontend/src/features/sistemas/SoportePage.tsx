@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { CATEGORIAS_T, type CategoriaTicket, ETIQUETA_CATEGORIA_T } from '../../entities/ticket'
+import { SelectScroll } from '../../shared/ui/SelectScroll'
 import { adjuntarPublico, crearTicket, listarAreas } from './soporteApi'
 
 function detalleError(err: unknown, p: string): string {
@@ -108,14 +109,12 @@ export function SoportePage() {
             </label>
             <label className="field">
               <span>Servicio / Área / Dependencia</span>
-              <select value={f.area} onChange={(e) => set('area', e.target.value)}>
-                <option value="">— Selecciona —</option>
-                {areas.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
+              <SelectScroll
+                value={f.area}
+                onChange={(v) => set('area', v)}
+                options={areas.map((a) => ({ value: a, label: a }))}
+                maxVisible={5}
+              />
             </label>
             <label className="field">
               <span>Categoría *</span>
