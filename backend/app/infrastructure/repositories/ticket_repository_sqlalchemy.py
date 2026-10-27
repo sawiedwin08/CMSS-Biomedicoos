@@ -8,6 +8,7 @@ from app.domain.exceptions import RecursoNoEncontrado
 from app.infrastructure.models.ticket import Ticket
 from app.infrastructure.models.ticket_adjunto import TicketAdjunto
 from app.infrastructure.models.ticket_comentario import TicketComentario
+from app.infrastructure.models.ticket_estado_historial import TicketEstadoHistorial
 from app.infrastructure.models.usuario import UsuarioModel
 
 
@@ -59,6 +60,13 @@ class TicketRepositorySQLAlchemy:
 
     def obtener_por_id(self, ticket_id: int) -> Ticket | None:
         return self._session.get(Ticket, ticket_id)
+
+    def obtener_por_numero(self, numero: str) -> Ticket | None:
+        return self._session.scalar(
+            select(Ticket).where(
+                func.lower(Ticket.numero) == numero.strip().lower()
+            )
+        )
 
     def obtener_por_numero_correo(self, numero: str, correo: str) -> Ticket | None:
         return self._session.scalar(
@@ -120,6 +128,35 @@ class TicketRepositorySQLAlchemy:
             stmt = stmt.where(Ticket.tecnico_id == tecnico_id)
         stmt = stmt.order_by(Ticket.created_at)
         return [(r[0], r[1], int(r[2] or 0)) for r in self._session.execute(stmt).all()]
+
+    # --- Historial de estados ---
+    def registrar_estado(self, ticket_id: int, estado: str) -> None:
+        self._session.add(
+            TicketEstadoHistorial(
+                ticket_id=ticket_id, estado=estado, fecha=datetime.now()
+            )
+        )
+        self._session.commit()
+
+    def historial_estados(
+        self, ticket_ids: list[int]
+    ) -> dict[int, list[tuple[str, datetime]]]:
+        """Devuelve {ticket_id: [(estado, fecha), ...]} ordenado por fecha."""
+        if not ticket_ids:
+            return {}
+        stmt = (
+            select(
+                TicketEstadoHistorial.ticket_id,
+                TicketEstadoHistorial.estado,
+                TicketEstadoHistorial.fecha,
+            )
+            .where(TicketEstadoHistorial.ticket_id.in_(ticket_ids))
+            .order_by(TicketEstadoHistorial.ticket_id, TicketEstadoHistorial.fecha)
+        )
+        salida: dict[int, list[tuple[str, datetime]]] = {}
+        for tid, estado, fecha in self._session.execute(stmt).all():
+            salida.setdefault(tid, []).append((estado, fecha))
+        return salida
 
     def contar_nuevos(self) -> int:
         total = self._session.scalar(

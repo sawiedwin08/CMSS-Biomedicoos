@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { ETIQUETA_CATEGORIA_T, ETIQUETA_ESTADO_T } from '../../entities/ticket'
@@ -10,10 +10,13 @@ function detalleError(err: unknown, p: string): string {
 
 export function SeguimientoPage() {
   const [numero, setNumero] = useState('')
-  const [correo, setCorreo] = useState('')
   const [consultando, setConsultando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [res, setRes] = useState<SeguimientoResult | null>(null)
+
+  useEffect(() => {
+    document.title = 'CMSS-Soporte'
+  }, [])
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -21,9 +24,9 @@ export function SeguimientoPage() {
     setError(null)
     setRes(null)
     try {
-      setRes(await consultarSeguimiento(numero.trim(), correo.trim()))
+      setRes(await consultarSeguimiento(numero.trim()))
     } catch (err) {
-      setError(detalleError(err, 'No se encontró el ticket. Verifica el número y el correo.'))
+      setError(detalleError(err, 'No se encontró el ticket. Verifica el número.'))
     } finally {
       setConsultando(false)
     }
@@ -33,7 +36,7 @@ export function SeguimientoPage() {
     <div style={{ maxWidth: 680, margin: '32px auto', padding: '0 16px' }}>
       <h1 style={{ marginBottom: 4 }}>Consultar un ticket</h1>
       <p className="muted" style={{ marginTop: 0 }}>
-        Ingresa tu número de ticket y el correo con el que lo registraste.{' '}
+        Ingresa tu número de ticket.{' '}
         <Link to="/soporte">Crear un ticket nuevo</Link>
       </p>
 
@@ -43,10 +46,6 @@ export function SeguimientoPage() {
           <label className="field">
             <span>Número de ticket *</span>
             <input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="MA-0001" required />
-          </label>
-          <label className="field">
-            <span>Correo *</span>
-            <input type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} required />
           </label>
         </div>
         <div style={{ marginTop: 10 }}>

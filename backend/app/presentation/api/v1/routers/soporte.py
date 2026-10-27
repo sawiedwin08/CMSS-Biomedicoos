@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from app.core.config import settings
-from app.presentation.api.deps import NotificacionRepo, TicketRepo
+from app.presentation.api.deps import NotificacionRepo, ServicioRepo, TicketRepo
 from app.presentation.schemas.ticket import (
     AdjuntoRead,
     ComentarioPublicoRead,
@@ -17,6 +17,11 @@ from app.presentation.schemas.ticket import (
 )
 
 router = APIRouter(prefix="/soporte", tags=["Mesa de ayuda · Público"])
+
+
+@router.get("/areas", summary="Áreas/servicios para el formulario (público)")
+def listar_areas(servicios: ServicioRepo) -> list[str]:
+    return sorted({s.nombre for s in servicios.listar()})
 
 _TICKETS_DIR = Path(settings.STORAGE_DIR) / "sistemas" / "tickets"
 _ADJ_MAX_BYTES = 10 * 1024 * 1024
@@ -63,6 +68,7 @@ def crear_ticket(
     d = datos.model_dump()
     d["categoria"] = datos.categoria.value
     ticket = tickets.crear(d)
+    tickets.registrar_estado(ticket.id, "nuevo")
     # Avisa a los supervisores (quienes pueden asignar) del ticket nuevo.
     destinatarios = notificaciones.destinatarios_por_permiso("mesa_ayuda:asignar")
     notificaciones.crear_para_usuarios(
@@ -101,11 +107,15 @@ def adjuntar_publico(
     summary="Consultar el estado de un ticket (número + correo)",
 )
 def seguimiento(consulta: SeguimientoConsulta, tickets: TicketRepo) -> TicketPublicoRead:
-    ticket = tickets.obtener_por_numero_correo(consulta.numero, consulta.correo)
+    # Si llega correo se valida; por ahora la consulta pública usa solo el número.
+    if consulta.correo:
+        ticket = tickets.obtener_por_numero_correo(consulta.numero, consulta.correo)
+    else:
+        ticket = tickets.obtener_por_numero(consulta.numero)
     if ticket is None:
         raise HTTPException(
             status_code=404,
-            detail="No se encontró un ticket con ese número y correo.",
+            detail="No se encontró un ticket con ese número.",
         )
     comentarios = tickets.listar_comentarios(ticket.id, solo_publicos=True)
     adjuntos = tickets.listar_adjuntos(ticket.id)

@@ -54,6 +54,20 @@ def contar_nuevos(tickets: TicketRepo) -> dict:
 
 
 @router.get(
+    "/tecnicos",
+    summary="Usuarios asignables (quienes tienen acceso a la mesa de ayuda)",
+    dependencies=[Depends(require_permiso("mesa_ayuda:ver"))],
+)
+def listar_tecnicos(usuarios: UsuarioRepo) -> list[dict]:
+    # Solo gente de Sistemas: usuarios activos con acceso a la mesa de ayuda.
+    return [
+        {"id": u.id, "nombre": u.nombre}
+        for u in usuarios.listar()
+        if u.activo and "mesa_ayuda:ver" in u.permisos
+    ]
+
+
+@router.get(
     "/tickets",
     response_model=list[TicketListItem],
     summary="Bandeja de tickets",
@@ -99,7 +113,8 @@ def reporte_tickets(
         prioridad=prioridad.value if prioridad else None,
         tecnico_id=tecnico_id,
     )
-    xlsx = generar_reporte(datos)
+    historial = tickets.historial_estados([t.id for t, _, _ in datos])
+    xlsx = generar_reporte(datos, historial)
     nombre = f"reporte_tickets_{date.today().isoformat()}.xlsx"
     return Response(
         content=xlsx,
@@ -154,6 +169,7 @@ def actualizar_ticket(
     t = tickets.actualizar(ticket_id, cambios)
     # Novedad a los supervisores cuando cambia el estado (excepto al propio autor).
     if estado_anterior != t.estado:
+        tickets.registrar_estado(t.id, t.estado)
         destinatarios = notificaciones.destinatarios_por_permiso(
             "mesa_ayuda:asignar", excluir_usuario_id=usuario.id
         )
@@ -185,9 +201,12 @@ def asignar_ticket(
         raise HTTPException(status_code=400, detail="El técnico asignado no existe.")
     cambios: dict = {"tecnico_id": datos.tecnico_id}
     # Al asignar un ticket aún nuevo, pasa automáticamente a "asignado".
-    if datos.tecnico_id and actual.estado == "nuevo":
+    bump_asignado = bool(datos.tecnico_id) and actual.estado == "nuevo"
+    if bump_asignado:
         cambios["estado"] = "asignado"
     t = tickets.actualizar(ticket_id, cambios)
+    if bump_asignado:
+        tickets.registrar_estado(t.id, "asignado")
     return TicketRead.model_validate(t)
 
 

@@ -103,6 +103,14 @@ export async function contarNuevos(): Promise<number> {
   return data.count
 }
 
+// Usuarios asignables: solo quienes tienen acceso a la mesa de ayuda (Sistemas).
+export async function listarTecnicosOpc(): Promise<{ id: number; nombre: string }[]> {
+  const { data } = await api.get<{ id: number; nombre: string }[]>(
+    '/sistemas/mesa-ayuda/tecnicos',
+  )
+  return data
+}
+
 export async function obtenerTicket(id: number): Promise<Ticket> {
   const { data } = await api.get<Ticket>(`/sistemas/mesa-ayuda/tickets/${id}`)
   return data

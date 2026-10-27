@@ -27,7 +27,8 @@ class TicketCreado(BaseModel):
 
 class SeguimientoConsulta(BaseModel):
     numero: str
-    correo: str
+    # Opcional: por ahora la consulta pública se hace solo con el número.
+    correo: str | None = None
 
 
 class ComentarioPublicoRead(BaseModel):
