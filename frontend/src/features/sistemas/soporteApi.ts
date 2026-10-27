@@ -15,6 +15,11 @@ export async function crearTicket(payload: TicketPublicoCreate): Promise<{ numer
   return data
 }
 
+export async function listarAreas(): Promise<string[]> {
+  const { data } = await api.get<string[]>('/soporte/areas')
+  return data
+}
+
 export interface ComentarioPublico {
   autor: string
   texto: string
@@ -42,7 +47,7 @@ export interface SeguimientoResult {
 
 export async function consultarSeguimiento(
   numero: string,
-  correo: string,
+  correo?: string,
 ): Promise<SeguimientoResult> {
   const { data } = await api.post<SeguimientoResult>('/soporte/seguimiento', { numero, correo })
   return data

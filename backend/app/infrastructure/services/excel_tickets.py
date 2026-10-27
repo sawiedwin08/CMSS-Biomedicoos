@@ -30,6 +30,9 @@ ETIQUETA_CATEGORIA = {
     "correo": "Correo",
     "accesos": "Accesos",
     "impresion": "Impresión",
+    "saludips": "SALUDIPS",
+    "sisconfi": "SISCONFI",
+    "saludips_net": "SALUDIPS.NET",
     "otro": "Otro",
 }
 ETIQUETA_PRIORIDAD = {
@@ -48,13 +51,42 @@ ETIQUETA_CAUSA = {
     "otro": "Otro",
 }
 ESTADOS_CERRADOS = {"resuelto", "cerrado"}
+# Para considerar un ticket "completo" debe haber pasado por estos 4 estados.
+_ESTADOS_REQUERIDOS = {"asignado", "en_proceso", "resuelto", "cerrado"}
+# Orden en que se muestran los estados (recorrido y tiempos por estado).
+_ORDEN_ESTADOS = [
+    "nuevo", "asignado", "en_proceso", "en_espera", "resuelto", "reabierto", "cerrado",
+]
 
 _ENCABEZADOS = [
     "Número", "Apertura", "Solicitante", "Correo", "Área", "Categoría",
     "Asunto", "Prioridad", "Estado", "Técnico", "1ª respuesta", "Cierre",
     "T. 1ª respuesta (h)", "T. resolución (h)", "Nº comentarios", "Causa", "Solución",
+    "Estados recorridos", "Completitud", "Tiempo por estado (h)",
 ]
 _AZUL = "FF1F4E79"
+
+
+def _analizar_historial(
+    hist: list[tuple[str, datetime]], ahora: datetime
+) -> tuple[str, bool, dict[str, float]]:
+    """De la lista [(estado, fecha)] calcula: recorrido (texto), si está completo
+    y el tiempo (horas) acumulado en cada estado."""
+    if not hist:
+        return "", False, {}
+    secuencia = [e for e, _ in hist]
+    recorrido = " → ".join(ETIQUETA_ESTADO.get(e, e) for e in secuencia)
+    completo = _ESTADOS_REQUERIDOS.issubset(set(secuencia))
+    tiempos: dict[str, float] = {}
+    for i, (estado, fecha) in enumerate(hist):
+        if i + 1 < len(hist):
+            fin = hist[i + 1][1]
+        else:
+            # Último estado: corre hasta ahora, salvo que ya esté cerrado.
+            fin = fecha if estado == "cerrado" else ahora
+        horas = (fin - fecha).total_seconds() / 3600
+        tiempos[estado] = round(tiempos.get(estado, 0.0) + horas, 1)
+    return recorrido, completo, tiempos
 
 
 def _fmt_dt(valor: datetime | None) -> str:
@@ -80,14 +112,15 @@ def _autoajustar(ws, anchos: dict[int, int]) -> None:
         ws.column_dimensions[get_column_letter(col)].width = ancho
 
 
-def generar_reporte(datos: list[tuple[Ticket, str | None, int]]) -> bytes:
-    wb = Workbook()
+def generar_reporte(
+    datos: list[tuple[Ticket, str | None, int]],
+    historial: dict[int, list[tuple[str, datetime]]] | None = None,
+) -> bytes:
+    historial = historial or {}
+    ahora = datetime.now()
 
-    # ---------- Hoja 1: detalle ----------
-    ws = wb.active
-    ws.title = "Tickets"
-    _encabezar(ws, _ENCABEZADOS)
-
+    # ---------- Primera pasada: filas de detalle + agregados ----------
+    filas: list[list] = []
     tr_respuesta: list[float] = []
     tr_resolucion: list[float] = []
     por_estado: Counter = Counter()
@@ -96,7 +129,9 @@ def generar_reporte(datos: list[tuple[Ticket, str | None, int]]) -> bytes:
     por_causa: Counter = Counter()
     por_tecnico: Counter = Counter()
     resol_por_tecnico: dict[str, list[float]] = {}
+    tiempos_estado_acum: dict[str, list[float]] = {}
     cerrados = 0
+    completos = 0
 
     for t, tecnico, n_com in datos:
         t_resp = _horas(t.created_at, t.fecha_primera_respuesta)
@@ -117,7 +152,18 @@ def generar_reporte(datos: list[tuple[Ticket, str | None, int]]) -> bytes:
         if t.estado in ESTADOS_CERRADOS:
             cerrados += 1
 
-        ws.append([
+        recorrido, completo, tiempos = _analizar_historial(historial.get(t.id, []), ahora)
+        if completo:
+            completos += 1
+        for est, h in tiempos.items():
+            tiempos_estado_acum.setdefault(est, []).append(h)
+        tiempo_txt = " · ".join(
+            f"{ETIQUETA_ESTADO.get(e, e)}: {tiempos[e]}"
+            for e in _ORDEN_ESTADOS
+            if e in tiempos
+        )
+
+        filas.append([
             t.numero,
             _fmt_dt(t.created_at),
             t.solicitante_nombre,
@@ -135,17 +181,17 @@ def generar_reporte(datos: list[tuple[Ticket, str | None, int]]) -> bytes:
             n_com,
             ETIQUETA_CAUSA.get(t.causa or "", t.causa or ""),
             t.solucion or "",
+            recorrido,
+            "Completo" if completo else "Incompleto",
+            tiempo_txt,
         ])
 
-    _autoajustar(ws, {
-        1: 12, 2: 17, 3: 22, 4: 26, 5: 16, 6: 12, 7: 34, 8: 10, 9: 13,
-        10: 20, 11: 17, 12: 17, 13: 17, 14: 17, 15: 14, 16: 20, 17: 40,
-    })
-    ws.freeze_panes = "A2"
-
-    # ---------- Hoja 2: resumen ----------
-    rs = wb.create_sheet("Resumen")
     total = len(datos)
+    wb = Workbook()
+
+    # ---------- Hoja 1: Resumen (primero) ----------
+    rs = wb.active
+    rs.title = "Resumen"
 
     def bloque(titulo: str, pares: list[tuple[str, object]]) -> None:
         rs.append([titulo])
@@ -161,12 +207,16 @@ def generar_reporte(datos: list[tuple[Ticket, str | None, int]]) -> bytes:
         return round(median(xs), 1) if xs else "—"
 
     tasa = f"{round(cerrados / total * 100)}%" if total else "—"
+    tasa_comp = f"{round(completos / total * 100)}%" if total else "—"
     bloque("Generales", [
-        ("Generado", datetime.now().strftime("%Y-%m-%d %H:%M")),
+        ("Generado", ahora.strftime("%Y-%m-%d %H:%M")),
         ("Total de tickets", total),
         ("Cerrados / resueltos", cerrados),
         ("Abiertos (en gestión)", total - cerrados),
         ("Tasa de resolución", tasa),
+        ("Tickets completos", completos),
+        ("Tickets incompletos", total - completos),
+        ("Tasa de completitud", tasa_comp),
     ])
     bloque("Tiempos (horas)", [
         ("Promedio 1ª respuesta", prom(tr_respuesta)),
@@ -174,6 +224,11 @@ def generar_reporte(datos: list[tuple[Ticket, str | None, int]]) -> bytes:
         ("Promedio resolución", prom(tr_resolucion)),
         ("Mediana resolución", med(tr_resolucion)),
     ])
+    bloque("Tiempo promedio por estado (h)", [
+        (ETIQUETA_ESTADO.get(e, e), prom(tiempos_estado_acum[e]))
+        for e in _ORDEN_ESTADOS
+        if e in tiempos_estado_acum
+    ] or [("Sin datos de recorrido", "—")])
     bloque("Por estado", [
         (ETIQUETA_ESTADO.get(k, k), v) for k, v in por_estado.most_common()
     ])
@@ -194,6 +249,18 @@ def generar_reporte(datos: list[tuple[Ticket, str | None, int]]) -> bytes:
         for tecnico, total_t in por_tecnico.most_common()
     ])
     _autoajustar(rs, {1: 42, 2: 24})
+
+    # ---------- Hoja 2: Tickets (detalle) ----------
+    ws = wb.create_sheet("Tickets")
+    _encabezar(ws, _ENCABEZADOS)
+    for fila in filas:
+        ws.append(fila)
+    _autoajustar(ws, {
+        1: 12, 2: 17, 3: 22, 4: 26, 5: 16, 6: 12, 7: 34, 8: 10, 9: 13,
+        10: 20, 11: 17, 12: 17, 13: 17, 14: 17, 15: 14, 16: 20, 17: 40,
+        18: 42, 19: 12, 20: 40,
+    })
+    ws.freeze_panes = "A2"
 
     salida = BytesIO()
     wb.save(salida)

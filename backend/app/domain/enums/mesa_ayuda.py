@@ -9,6 +9,9 @@ class CategoriaTicket(StrEnum):
     CORREO = "correo"
     ACCESOS = "accesos"
     IMPRESION = "impresion"
+    SALUDIPS = "saludips"
+    SISCONFI = "sisconfi"
+    SALUDIPS_NET = "saludips_net"
     OTRO = "otro"
 
 

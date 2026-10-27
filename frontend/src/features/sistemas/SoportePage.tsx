@@ -1,8 +1,8 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { CATEGORIAS_T, type CategoriaTicket, ETIQUETA_CATEGORIA_T } from '../../entities/ticket'
-import { adjuntarPublico, crearTicket } from './soporteApi'
+import { adjuntarPublico, crearTicket, listarAreas } from './soporteApi'
 
 function detalleError(err: unknown, p: string): string {
   return (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? p
@@ -21,6 +21,14 @@ export function SoportePage() {
   const [enviando, setEnviando] = useState(false)
   const [numero, setNumero] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [areas, setAreas] = useState<string[]>([])
+
+  useEffect(() => {
+    document.title = 'CMSS-Soporte'
+    listarAreas()
+      .then(setAreas)
+      .catch(() => setAreas([]))
+  }, [])
 
   function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) {
     setF((x) => ({ ...x, [k]: v }))
@@ -99,8 +107,15 @@ export function SoportePage() {
               <input type="email" value={f.solicitante_correo} onChange={(e) => set('solicitante_correo', e.target.value)} required />
             </label>
             <label className="field">
-              <span>Área / Dependencia</span>
-              <input value={f.area} onChange={(e) => set('area', e.target.value)} />
+              <span>Servicio / Área / Dependencia</span>
+              <select value={f.area} onChange={(e) => set('area', e.target.value)}>
+                <option value="">— Selecciona —</option>
+                {areas.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="field">
               <span>Categoría *</span>

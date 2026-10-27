@@ -23,6 +23,7 @@ from app.infrastructure.models.permiso import PermisoModel
 from app.infrastructure.models.plantilla_rutina import PlantillaRutina
 from app.infrastructure.models.ticket import Ticket
 from app.infrastructure.models.ticket_adjunto import TicketAdjunto
+from app.infrastructure.models.ticket_estado_historial import TicketEstadoHistorial
 from app.infrastructure.models.ticket_comentario import TicketComentario
 from app.infrastructure.models.proveedor import Proveedor
 from app.infrastructure.models.representante import Representante
@@ -52,6 +53,7 @@ __all__ = [
     "PlantillaRutina",
     "Ticket",
     "TicketAdjunto",
+    "TicketEstadoHistorial",
     "TicketComentario",
     "Proveedor",
     "Representante",

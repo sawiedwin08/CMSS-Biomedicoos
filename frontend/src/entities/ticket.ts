@@ -5,6 +5,9 @@ export type CategoriaTicket =
   | 'correo'
   | 'accesos'
   | 'impresion'
+  | 'saludips'
+  | 'sisconfi'
+  | 'saludips_net'
   | 'otro'
 
 export type PrioridadTicket = 'baja' | 'media' | 'alta' | 'critica'
@@ -34,6 +37,9 @@ export const ETIQUETA_CATEGORIA_T: Record<CategoriaTicket, string> = {
   correo: 'Correo',
   accesos: 'Accesos / Usuarios',
   impresion: 'Impresión',
+  saludips: 'SALUDIPS',
+  sisconfi: 'SISCONFI',
+  saludips_net: 'SALUDIPS.NET',
   otro: 'Otro',
 }
 
@@ -61,6 +67,9 @@ export const CATEGORIAS_T: CategoriaTicket[] = [
   'correo',
   'accesos',
   'impresion',
+  'saludips',
+  'sisconfi',
+  'saludips_net',
   'otro',
 ]
 export const ETIQUETA_CAUSA: Record<CausaTicket, string> = {

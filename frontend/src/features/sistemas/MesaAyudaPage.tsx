@@ -18,7 +18,7 @@ import {
 import { useAuth } from '../../shared/auth/AuthContext'
 import DataTable, { type Columna } from '../../shared/ui/DataTable'
 import { cerrarAlClicFuera } from '../../shared/ui/overlay'
-import { listarUsuariosOpc, type Opcion } from './activosApi'
+import { type Opcion } from './activosApi'
 import {
   actualizarTicket,
   type Adjunto,
@@ -29,6 +29,7 @@ import {
   descargarReporteTickets,
   listarAdjuntos,
   listarComentarios,
+  listarTecnicosOpc,
   listarTickets,
   obtenerTicket,
   subirAdjunto,
@@ -154,7 +155,7 @@ export function MesaAyudaPage() {
   }
 
   useEffect(() => {
-    if (puedeVer) listarUsuariosOpc().then(setUsuarios)
+    if (puedeVer) listarTecnicosOpc().then(setUsuarios).catch(() => {})
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {})
     }
