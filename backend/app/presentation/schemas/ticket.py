@@ -14,11 +14,14 @@ from app.domain.enums.mesa_ayuda import (
 # ---------- Público (sin login) ----------
 class TicketPublicoCreate(BaseModel):
     solicitante_nombre: str = Field(min_length=2, max_length=150)
-    solicitante_correo: str = Field(min_length=5, max_length=150)
+    # Correo opcional: el solicitante puede dejarlo vacío.
+    solicitante_correo: str | None = Field(default=None, max_length=150)
     area: str | None = Field(default=None, max_length=150)
     categoria: CategoriaTicket
-    asunto: str = Field(min_length=3, max_length=200)
+    prioridad: PrioridadTicket = PrioridadTicket.MEDIA
     descripcion: str = Field(min_length=3)
+    # El asunto ya no se captura en el formulario; se deriva de la descripción.
+    asunto: str | None = Field(default=None, max_length=200)
 
 
 class TicketCreado(BaseModel):

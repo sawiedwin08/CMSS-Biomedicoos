@@ -71,6 +71,7 @@ export function MesaAyudaPage() {
   const [fEstado, setFEstado] = useState<EstadoTicket | ''>('')
   const [fCategoria, setFCategoria] = useState<CategoriaTicket | ''>('')
   const [texto, setTexto] = useState('')
+  const [fMios, setFMios] = useState(false)
   const [abierto, setAbierto] = useState<number | null>(null)
   const [usuarios, setUsuarios] = useState<Opcion[]>([])
   const [toast, setToast] = useState<string | null>(null)
@@ -116,6 +117,7 @@ export function MesaAyudaPage() {
         estado: fEstado || undefined,
         categoria: fCategoria || undefined,
         texto: texto || undefined,
+        mios: fMios || undefined,
       }),
     )
     setNuevos(await contarNuevos())
@@ -177,7 +179,7 @@ export function MesaAyudaPage() {
     }, 10000)
     return () => clearInterval(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fEstado, fCategoria, texto])
+  }, [fEstado, fCategoria, texto, fMios])
 
   // Sondeo de novedades (independiente de los filtros): campanita + aviso.
   useEffect(() => {
@@ -380,6 +382,10 @@ export function MesaAyudaPage() {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="check-row" style={{ alignItems: 'center' }}>
+            <input type="checkbox" checked={fMios} onChange={(e) => setFMios(e.target.checked)} />
+            <span>Solo mis tickets (asignados a mí)</span>
           </label>
         </div>
       </div>

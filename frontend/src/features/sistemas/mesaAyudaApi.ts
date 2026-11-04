@@ -87,6 +87,7 @@ export interface FiltroTickets {
   estado?: EstadoTicket
   categoria?: CategoriaTicket
   texto?: string
+  mios?: boolean
 }
 
 export async function listarTickets(filtro: FiltroTickets = {}): Promise<TicketListItem[]> {
@@ -94,6 +95,7 @@ export async function listarTickets(filtro: FiltroTickets = {}): Promise<TicketL
   if (filtro.estado) params.estado = filtro.estado
   if (filtro.categoria) params.categoria = filtro.categoria
   if (filtro.texto) params.texto = filtro.texto
+  if (filtro.mios) params.mios = 'true'
   const { data } = await api.get<TicketListItem[]>('/sistemas/mesa-ayuda/tickets', { params })
   return data
 }
