@@ -196,7 +196,13 @@ export function MesaAyudaPage() {
 
   const columnas: Columna<TicketListItem>[] = [
     { id: 'numero', header: 'Ticket', accessorFn: (t) => t.numero },
-    { id: 'asunto', header: 'Asunto', accessorFn: (t) => t.asunto },
+    {
+      id: 'asunto',
+      header: 'Asunto',
+      accessorFn: (t) => t.asunto,
+      size: 180,
+      meta: { truncate: true },
+    },
     { id: 'solic', header: 'Solicitante', accessorFn: (t) => t.solicitante_nombre },
     { id: 'cat', header: 'Categoría', accessorFn: (t) => ETIQUETA_CATEGORIA_T[t.categoria] },
     { id: 'prio', header: 'Prioridad', accessorFn: (t) => ETIQUETA_PRIORIDAD[t.prioridad] },
@@ -219,6 +225,7 @@ export function MesaAyudaPage() {
       id: 'acc',
       header: '',
       enableSorting: false,
+      meta: { stickyRight: true },
       cell: ({ row }) => (
         <button className="btn-ghost" onClick={() => setAbierto(row.original.id)}>
           Abrir
