@@ -36,13 +36,35 @@ export function SoportePage() {
 
   function copiarNumero() {
     if (!numero) return
-    navigator.clipboard
-      .writeText(numero)
-      .then(() => {
-        setCopiado(true)
-        window.setTimeout(() => setCopiado(false), 2000)
-      })
-      .catch(() => {})
+    const ok = () => {
+      setCopiado(true)
+      window.setTimeout(() => setCopiado(false), 2000)
+    }
+    // navigator.clipboard solo existe en contextos seguros (HTTPS o localhost).
+    // Por LAN en HTTP plano no está disponible, así que usamos un respaldo.
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(numero).then(ok).catch(() => copiarRespaldo(numero, ok))
+      return
+    }
+    copiarRespaldo(numero, ok)
+  }
+
+  function copiarRespaldo(texto: string, ok: () => void) {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = texto
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      ta.setAttribute('readonly', '')
+      document.body.appendChild(ta)
+      ta.select()
+      ta.setSelectionRange(0, texto.length)
+      const copiado = document.execCommand('copy')
+      document.body.removeChild(ta)
+      if (copiado) ok()
+    } catch {
+      /* sin portapapeles: el número igual queda visible para copiarlo a mano */
+    }
   }
 
   useEffect(() => {
