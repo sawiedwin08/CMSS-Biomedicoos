@@ -1,9 +1,18 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { CATEGORIAS_T, type CategoriaTicket, ETIQUETA_CATEGORIA_T } from '../../entities/ticket'
-import { SelectScroll } from '../../shared/ui/SelectScroll'
+import {
+  CATEGORIAS_T,
+  type CategoriaTicket,
+  ETIQUETA_CATEGORIA_T,
+  ETIQUETA_PRIORIDAD,
+  type PrioridadTicket,
+} from '../../entities/ticket'
+import { ComboBox } from '../../shared/ui/ComboBox'
 import { adjuntarPublico, crearTicket, listarAreas } from './soporteApi'
+
+// En el formulario público solo se ofrecen 3 prioridades.
+const PRIORIDADES_PUB: PrioridadTicket[] = ['alta', 'media', 'baja']
 
 function detalleError(err: unknown, p: string): string {
   return (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? p
@@ -15,14 +24,26 @@ export function SoportePage() {
     solicitante_correo: '',
     area: '',
     categoria: 'hardware' as CategoriaTicket,
-    asunto: '',
+    prioridad: 'media' as PrioridadTicket,
     descripcion: '',
   })
   const [archivos, setArchivos] = useState<File[]>([])
   const [enviando, setEnviando] = useState(false)
   const [numero, setNumero] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [areas, setAreas] = useState<string[]>([])
+
+  function copiarNumero() {
+    if (!numero) return
+    navigator.clipboard
+      .writeText(numero)
+      .then(() => {
+        setCopiado(true)
+        window.setTimeout(() => setCopiado(false), 2000)
+      })
+      .catch(() => {})
+  }
 
   useEffect(() => {
     document.title = 'CMSS-Soporte'
@@ -40,10 +61,17 @@ export function SoportePage() {
     setEnviando(true)
     setError(null)
     try {
-      const r = await crearTicket({ ...f, area: f.area || null })
+      const r = await crearTicket({
+        solicitante_nombre: f.solicitante_nombre,
+        solicitante_correo: f.solicitante_correo || null,
+        area: f.area || null,
+        categoria: f.categoria,
+        prioridad: f.prioridad,
+        descripcion: f.descripcion,
+      })
       for (const archivo of archivos) {
         try {
-          await adjuntarPublico(r.numero, f.solicitante_correo, archivo)
+          await adjuntarPublico(r.numero, archivo)
         } catch {
           /* si un adjunto falla, el ticket igual se creó */
         }
@@ -68,9 +96,23 @@ export function SoportePage() {
         <div className="card" style={{ textAlign: 'center' }}>
           <h2>¡Ticket registrado! ✅</h2>
           <p>Tu número de seguimiento es:</p>
-          <p style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--azul)' }}>{numero}</p>
-          <p className="muted">
-            Guárdalo. Con ese número y tu correo puedes consultar el estado en “Consultar un ticket”.
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <span style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--azul)' }}>
+              {numero}
+            </span>
+            <button type="button" className="btn-ghost" onClick={copiarNumero}>
+              {copiado ? '¡Copiado!' : 'Copiar'}
+            </button>
+          </div>
+          <p style={{ fontWeight: 600, marginTop: 10 }}>
+            📌 Para realizar seguimiento de tu ticket, recuerda guardar tu número de ticket.
           </p>
           <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
             <Link className="btn-primary" to="/soporte/seguimiento">
@@ -86,7 +128,7 @@ export function SoportePage() {
                   solicitante_correo: '',
                   area: '',
                   categoria: 'hardware',
-                  asunto: '',
+                  prioridad: 'media',
                   descripcion: '',
                 })
               }}
@@ -104,15 +146,16 @@ export function SoportePage() {
               <input value={f.solicitante_nombre} onChange={(e) => set('solicitante_nombre', e.target.value)} required minLength={2} />
             </label>
             <label className="field">
-              <span>Correo *</span>
-              <input type="email" value={f.solicitante_correo} onChange={(e) => set('solicitante_correo', e.target.value)} required />
+              <span>Correo (opcional)</span>
+              <input type="email" value={f.solicitante_correo} onChange={(e) => set('solicitante_correo', e.target.value)} />
             </label>
             <label className="field">
               <span>Servicio / Área / Dependencia</span>
-              <SelectScroll
+              <ComboBox
                 value={f.area}
                 onChange={(v) => set('area', v)}
-                options={areas.map((a) => ({ value: a, label: a }))}
+                options={areas}
+                placeholder="Escribe o elige de la lista…"
                 maxVisible={5}
               />
             </label>
@@ -126,14 +169,27 @@ export function SoportePage() {
                 ))}
               </select>
             </label>
+            <label className="field">
+              <span>Prioridad *</span>
+              <select value={f.prioridad} onChange={(e) => set('prioridad', e.target.value as PrioridadTicket)}>
+                {PRIORIDADES_PUB.map((p) => (
+                  <option key={p} value={p}>
+                    {ETIQUETA_PRIORIDAD[p]}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <label className="field">
-            <span>Asunto *</span>
-            <input value={f.asunto} onChange={(e) => set('asunto', e.target.value)} required minLength={3} />
-          </label>
-          <label className="field">
             <span>Descripción *</span>
-            <textarea value={f.descripcion} onChange={(e) => set('descripcion', e.target.value)} rows={4} required minLength={3} />
+            <textarea
+              value={f.descripcion}
+              onChange={(e) => set('descripcion', e.target.value)}
+              rows={4}
+              required
+              minLength={3}
+              placeholder="Incluye detalles específicos para ayudarte de manera correcta. Puedes anexar una captura o fotografía."
+            />
           </label>
           <label className="field">
             <span>Adjuntar archivos (opcional — captura del error, foto, etc.)</span>
@@ -147,7 +203,11 @@ export function SoportePage() {
               <small className="muted">{archivos.length} archivo(s) seleccionado(s)</small>
             )}
           </label>
-          <div style={{ marginTop: 10 }}>
+          <p className="muted" style={{ fontSize: '0.85rem', marginTop: 10 }}>
+            💡 Al enviar recibirás un número de ticket. Para realizar seguimiento, recuerda
+            guardarlo.
+          </p>
+          <div style={{ marginTop: 6 }}>
             <button type="submit" className="btn-primary" disabled={enviando}>
               {enviando ? 'Enviando…' : 'Enviar ticket'}
             </button>

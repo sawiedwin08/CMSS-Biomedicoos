@@ -67,6 +67,14 @@ def crear_ticket(
 ) -> TicketCreado:
     d = datos.model_dump()
     d["categoria"] = datos.categoria.value
+    d["prioridad"] = datos.prioridad.value
+    d["solicitante_correo"] = (datos.solicitante_correo or "").strip()
+    # Título (asunto): se deriva de la descripción si no viene.
+    asunto = (datos.asunto or "").strip()
+    if not asunto:
+        desc = datos.descripcion.strip()
+        asunto = desc[:80] + ("…" if len(desc) > 80 else "")
+    d["asunto"] = asunto
     ticket = tickets.crear(d)
     tickets.registrar_estado(ticket.id, "nuevo")
     # Avisa a los supervisores (quienes pueden asignar) del ticket nuevo.
@@ -86,17 +94,21 @@ def crear_ticket(
     "/adjuntos",
     response_model=AdjuntoRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Adjuntar un archivo a un ticket (público, con número + correo)",
+    summary="Adjuntar un archivo a un ticket (público, por número)",
 )
 def adjuntar_publico(
     tickets: TicketRepo,
     numero: Annotated[str, Form()],
-    correo: Annotated[str, Form()],
     archivo: Annotated[UploadFile, File()],
+    correo: Annotated[str | None, Form()] = None,
 ) -> AdjuntoRead:
-    ticket = tickets.obtener_por_numero_correo(numero, correo)
+    ticket = (
+        tickets.obtener_por_numero_correo(numero, correo)
+        if correo
+        else tickets.obtener_por_numero(numero)
+    )
     if ticket is None:
-        raise HTTPException(status_code=404, detail="No existe un ticket con ese número y correo.")
+        raise HTTPException(status_code=404, detail="No existe un ticket con ese número.")
     adj = guardar_adjunto(tickets, ticket, archivo, origen="solicitante", usuario_id=None)
     return AdjuntoRead.model_validate(adj)
 

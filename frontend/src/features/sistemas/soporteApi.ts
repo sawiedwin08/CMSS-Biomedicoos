@@ -1,12 +1,12 @@
-import type { CategoriaTicket, EstadoTicket } from '../../entities/ticket'
+import type { CategoriaTicket, EstadoTicket, PrioridadTicket } from '../../entities/ticket'
 import { api } from '../../shared/api/client'
 
 export interface TicketPublicoCreate {
   solicitante_nombre: string
-  solicitante_correo: string
+  solicitante_correo?: string | null
   area?: string | null
   categoria: CategoriaTicket
-  asunto: string
+  prioridad: PrioridadTicket
   descripcion: string
 }
 
@@ -53,14 +53,9 @@ export async function consultarSeguimiento(
   return data
 }
 
-export async function adjuntarPublico(
-  numero: string,
-  correo: string,
-  archivo: File,
-): Promise<void> {
+export async function adjuntarPublico(numero: string, archivo: File): Promise<void> {
   const fd = new FormData()
   fd.append('numero', numero)
-  fd.append('correo', correo)
   fd.append('archivo', archivo)
   await api.post('/soporte/adjuntos', fd)
 }

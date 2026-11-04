@@ -75,14 +75,17 @@ def listar_tecnicos(usuarios: UsuarioRepo) -> list[dict]:
 )
 def listar_tickets(
     tickets: TicketRepo,
+    usuario: CurrentUser,
     estado: Annotated[EstadoTicket | None, Query()] = None,
     categoria: Annotated[CategoriaTicket | None, Query()] = None,
     texto: Annotated[str | None, Query()] = None,
+    mios: Annotated[bool, Query()] = False,
 ) -> list[TicketListItem]:
     out: list[TicketListItem] = []
     for t, tecnico in tickets.listar(
         estado=estado.value if estado else None,
         categoria=categoria.value if categoria else None,
+        tecnico_id=usuario.id if mios else None,
         texto=texto,
     ):
         item = TicketListItem.model_validate(t)
