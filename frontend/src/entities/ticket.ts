@@ -60,9 +60,9 @@ export const ETIQUETA_ESTADO_T: Record<EstadoTicket, string> = {
   reabierto: 'Reabierto',
 }
 
+// Opciones que se ofrecen en los desplegables. Hardware y Software se quitaron
+// a propósito; siguen en ETIQUETA_CATEGORIA_T para mostrar tickets antiguos.
 export const CATEGORIAS_T: CategoriaTicket[] = [
-  'hardware',
-  'software',
   'red',
   'correo',
   'accesos',
